@@ -29,6 +29,10 @@ public class DataSeeder {
                 // Director
                 userRepository.save(new User(null, "director@ace.com", "director123", "DIRECTOR"));
 
+                //Area Manager
+                userRepository.save(new User(null, "am@ace.com", "uthu", "AREA_MANAGER"));
+
+
                 System.out.println("Default users seeded to database.");
             }
         };

@@ -29,6 +29,8 @@ public class AuthService {
 
     private String getRedirectUrl(String role) {
         switch (role) {
+            case "AREA_MANAGER":
+                return "/area-manager";
             case "OPERATIONAL_MANAGER":
                 return "/operational-manager";
             case "EXECUTIVE":

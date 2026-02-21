@@ -1,0 +1,359 @@
+.area-monthly * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.area-monthly {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+.area-monthly .header {
+  background: white;
+  padding: 25px 30px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-left: 5px solid #ffd700;
+}
+
+.area-monthly .header h2 {
+  color: #1a1a1a;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.area-monthly .header p {
+  color: #666;
+  font-size: 14px;
+}
+
+.area-monthly .content-wrapper {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 25px;
+}
+
+.area-monthly .form-section {
+  margin-bottom: 30px;
+}
+
+.area-monthly .form-section h3 {
+  color: #1a1a1a;
+  font-size: 18px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #ffd700;
+}
+
+.area-monthly .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.area-monthly .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.area-monthly .form-group label {
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.area-monthly .form-group input,
+.area-monthly .form-group select,
+.area-monthly .form-group textarea {
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+  font-family: inherit;
+}
+
+.area-monthly .form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.area-monthly .form-group input:focus,
+.area-monthly .form-group select:focus,
+.area-monthly .form-group textarea:focus {
+  outline: none;
+  border-color: #ffd700;
+}
+
+.area-monthly .btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.area-monthly .btn-primary {
+  background: #ffd700;
+  color: #1a1a1a;
+}
+
+.area-monthly .btn-primary:hover {
+  background: #1a1a1a;
+  color: #ffd700;
+  transform: translateY(-2px);
+}
+
+.area-monthly .btn-secondary {
+  background: #1a1a1a;
+  color: white;
+  margin-left: 10px;
+}
+
+.area-monthly .btn-secondary:hover {
+  background: #ffd700;
+  color: #1a1a1a;
+}
+
+.area-monthly .reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.area-monthly .reports-table thead {
+  background: #1a1a1a;
+  color: white;
+}
+
+.area-monthly .reports-table th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.area-monthly .reports-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s;
+}
+
+.area-monthly .reports-table tbody tr:hover {
+  background: #fffef0;
+}
+
+.area-monthly .reports-table td {
+  padding: 15px;
+  font-size: 14px;
+  color: #333;
+}
+
+.area-monthly .empty-state {
+  text-align: center;
+  padding: 30px;
+  color: #999;
+}
+
+.area-monthly .badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.area-monthly .badge-draft {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.area-monthly .badge-submitted {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.area-monthly .badge-reviewed,
+.area-monthly .badge-approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.area-monthly .badge-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Action buttons in table */
+.area-monthly .actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.area-monthly .btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.area-monthly .btn-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.area-monthly .btn-edit {
+  background: #2563eb;
+  color: white;
+}
+
+.area-monthly .btn-edit:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+.area-monthly .btn-delete {
+  background: #dc2626;
+  color: white;
+}
+
+.area-monthly .btn-delete:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+}
+
+.area-monthly .btn-view {
+  background: #ffd700;
+  color: #1a1a1a;
+  padding: 8px 16px;
+  border-radius: 5px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.area-monthly .btn-view:hover {
+  background: #1a1a1a;
+  color: #ffd700;
+}
+
+.area-monthly .section-title {
+  color: #1a1a1a;
+  font-size: 18px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #ffd700;
+}
+
+/* Edit modal */
+.area-monthly .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: area-monthly-fadeIn 0.2s ease-out;
+}
+
+@keyframes area-monthly-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.area-monthly .modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: area-monthly-slideUp 0.25s ease-out;
+}
+
+@keyframes area-monthly-slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.area-monthly .modal h3 {
+  padding: 20px 24px 16px;
+  margin: 0;
+  font-size: 18px;
+  color: #1a1a1a;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.area-monthly .modal form {
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.area-monthly .modal .form-group {
+  margin-bottom: 16px;
+}
+
+.area-monthly .modal .form-group:last-of-type {
+  margin-bottom: 20px;
+}
+
+.area-monthly .modal-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+
+.area-monthly .modal-actions .btn {
+  margin-left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.area-monthly .spin {
+  animation: area-monthly-spin 0.8s linear infinite;
+}
+
+@keyframes area-monthly-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+

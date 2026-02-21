@@ -1,0 +1,32 @@
+package com.security.Ace.Front.Line.Security.Solutions.repository;
+
+import com.security.Ace.Front.Line.Security.Solutions.entity.WeeklyReport;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long> {
+
+    List<WeeklyReport> findByAreaManagerId(Long areaManagerId);
+
+    List<WeeklyReport> findBySecurityOfficerId(Long securityOfficerId);
+
+    List<WeeklyReport> findByYearAndWeekNumber(Integer year, Integer weekNumber);
+
+    Optional<WeeklyReport> findBySecurityOfficerIdAndYearAndWeekNumber(
+            Long securityOfficerId, Integer year, Integer weekNumber);
+
+    Optional<WeeklyReport> findBySecurityOfficerIdAndYearAndMonthAndWeekNumber(
+            Long securityOfficerId, Integer year, Integer month, Integer weekNumber);
+
+    @Query("SELECT w FROM WeeklyReport w WHERE w.areaManager.id = :managerId " +
+            "AND w.year = :year ORDER BY w.month, w.weekNumber")
+    List<WeeklyReport> findByManagerAndYear(
+            @Param("managerId") Long managerId,
+            @Param("year") Integer year);
+}

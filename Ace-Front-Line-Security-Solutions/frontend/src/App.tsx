@@ -12,6 +12,12 @@ import DashboardLayout from "./components/DashboardLayout";
 import PlaceholderPage from "./components/PlaceholderPage";
 import Careers from "./pages/Careers";
 import Inquiries from "./pages/Inquiries";
+import AreaManagerAttendance from "./pages/area-manager/Attendance";
+import AreaManagerDashboard from "./pages/area-manager/Dashboard";
+import AreaManagerLeaveManagement from "./pages/area-manager/LeaveManagement";
+import AreaManagerMonthlyReport from "./pages/area-manager/MonthlyReport";
+import AreaManagerMonthlyStatistics from "./pages/area-manager/MonthlyStatistics";
+import AreaManagerWeeklyReport from "./pages/area-manager/WeeklyReport";
 
 const queryClient = new QueryClient();
 
@@ -96,14 +102,21 @@ const clientItems = [
   { label: "Payments", path: "payments" },
 ];
 
-function renderDashboardRoutes(items: { label: string; path: string }[]) {
+function renderDashboardRoutes(
+  items: { label: string; path: string }[],
+  overrides: { [key: string]: JSX.Element } = {}
+) {
   return (
     <>
-      <Route index element={<PlaceholderPage title="Dashboard" />} />
+      <Route index element={overrides["dashboard"] ?? <PlaceholderPage title="Dashboard" />} />
       {items.map((item) => (
-        <Route key={item.path} path={item.path} element={<PlaceholderPage title={item.label} />} />
+        <Route
+          key={item.path}
+          path={item.path}
+          element={overrides[item.path] ?? <PlaceholderPage title={item.label} />}
+        />
       ))}
-      <Route path="profile" element={<PlaceholderPage title="Profile" />} />
+      <Route path="profile" element={overrides["profile"] ?? <PlaceholderPage title="Profile" />} />
     </>
   );
 }
@@ -123,7 +136,14 @@ const App = () => (
           <Route path="/inquiries" element={<Inquiries />} />
 
           <Route path="/area-manager" element={<DashboardLayout title="Area Manager" role="Area Manager" items={areaManagerItems} basePath="/area-manager" />}>
-            {renderDashboardRoutes(areaManagerItems)}
+            {renderDashboardRoutes(areaManagerItems, {
+              dashboard: <AreaManagerDashboard />,
+              "weekly-report": <AreaManagerWeeklyReport />,
+              attendance: <AreaManagerAttendance />,
+              "leave-management": <AreaManagerLeaveManagement />,
+              "monthly-report": <AreaManagerMonthlyReport />,
+              "monthly-statistics": <AreaManagerMonthlyStatistics />,
+            })}
           </Route>
 
           <Route path="/accountant" element={<DashboardLayout title="Accountant" role="Accountant" items={accountantItems} basePath="/accountant" />}>
