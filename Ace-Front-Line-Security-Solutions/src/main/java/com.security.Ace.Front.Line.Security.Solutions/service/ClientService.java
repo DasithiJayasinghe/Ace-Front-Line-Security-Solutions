@@ -3,6 +3,7 @@ package com.security.Ace.Front.Line.Security.Solutions.service;
 import com.security.Ace.Front.Line.Security.Solutions.dto.*;
 import com.security.Ace.Front.Line.Security.Solutions.entity.*;
 import com.security.Ace.Front.Line.Security.Solutions.exception.DuplicateResourceException;
+import com.security.Ace.Front.Line.Security.Solutions.exception.InvalidOperationException;
 import com.security.Ace.Front.Line.Security.Solutions.exception.ResourceNotFoundException;
 import com.security.Ace.Front.Line.Security.Solutions.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -10,8 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Year;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -28,52 +30,67 @@ public class ClientService {
 
     @Transactional
     public ClientResponse registerClient(ClientRegistrationRequest request) {
-        // Check for duplicates
+        // Duplicate checks
         String username = generateUsername(request.getCompanyName());
 
         if (clientRepository.existsByUsername(username)) {
             throw new DuplicateResourceException("Client", "company name", request.getCompanyName());
         }
-
         if (clientRepository.existsByContactPersonEmail(request.getContactPersonEmail())) {
             throw new DuplicateResourceException("Client", "email", request.getContactPersonEmail());
         }
-
         if (request.getCompanyRegistrationNo() != null &&
                 clientRepository.existsByCompanyRegistrationNo(request.getCompanyRegistrationNo())) {
             throw new DuplicateResourceException("Client", "registration number", request.getCompanyRegistrationNo());
         }
 
-        // Generate password
-        String password = generateRandomPassword();
+        // Generate temporary password (min 8 chars per guide)
+        String tempPassword = generateRandomPassword();
 
-        // Create client entity
+        // Generate unique client code e.g. ACE-2026-001
+        String clientCode = generateClientCode();
+
+        // Build entity
         Client client = new Client();
+        client.setClientCode(clientCode);
         client.setCompanyName(request.getCompanyName());
         client.setCompanyRegistrationNo(request.getCompanyRegistrationNo());
+        client.setVatNumber(request.getVatNumber());
         client.setIndustryType(request.getIndustryType());
         client.setAddress(request.getAddress());
+        client.setServiceLocation(request.getServiceLocation());
         client.setCity(request.getCity());
         client.setContactPersonName(request.getContactPersonName());
+        client.setContactPersonDesignation(request.getContactPersonDesignation());
         client.setContactPersonEmail(request.getContactPersonEmail());
         client.setContactPersonPhone(request.getContactPersonPhone());
         client.setUsername(username);
-        client.setPasswordHash(passwordEncoder.encode(password));
+        client.setPasswordHash(passwordEncoder.encode(tempPassword));
+        client.setIsFirstLogin(true);
         client.setServiceStartDate(request.getServiceStartDate());
-        client.setContractDurationMonths(request.getContractDurationMonths());
-        client.setMonthlyBaseFee(BigDecimal.valueOf(request.getMonthlyBaseFee()));
-        client.setOtRatePerHour(BigDecimal.valueOf(request.getOtRatePerHour()));
-        client.setRiskLevel(RiskLevel.valueOf(request.getRiskLevel()));
+        client.setContractDurationMonths(
+                request.getContractDurationMonths() != null ? request.getContractDurationMonths() : 12);
+        // Invoice calculation fields
+        client.setOicCount(request.getOicCount());
+        client.setJsoCount(request.getJsoCount());
+        client.setOicRatePerShift(request.getOicRatePerShift());
+        client.setJsoRatePerShift(request.getJsoRatePerShift());
+        client.setOtRatePerHour(request.getOtRatePerHour());
+        // Risk assessment
+        if (request.getRiskLevel() != null) {
+            client.setRiskLevel(RiskLevel.valueOf(request.getRiskLevel()));
+        }
         client.setRecommendedOfficers(request.getRecommendedOfficers());
         client.setStatus(ClientStatus.ACTIVE);
-        client.setIsFirstLogin(true);
         client.setRegisteredAt(LocalDateTime.now());
+        client.setUpdatedAt(LocalDateTime.now());
 
         Client savedClient = clientRepository.save(client);
-        emailService.sendCredentialsEmail(savedClient, password);
-        ClientResponse response = mapToResponse(savedClient);
-        response.setTemporaryPassword(password);
-        return response;
+
+        // Send welcome email with credentials — password never returned in response
+        emailService.sendCredentialsEmail(savedClient, tempPassword);
+
+        return mapToResponse(savedClient);
     }
 
     @Transactional(readOnly = true)
@@ -97,57 +114,44 @@ public class ClientService {
         return mapToResponse(client);
     }
 
+    @Transactional(readOnly = true)
+    public List<ClientResponse> getClientsExpiringSoon(int withinDays) {
+        return clientRepository.findClientsExpiringSoonNative(withinDays).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ClientResponse updateClient(Integer clientId, ClientUpdateRequest request) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", "id", clientId));
 
-        // Update fields
-        if (request.getCompanyName() != null) {
-            client.setCompanyName(request.getCompanyName());
-        }
-        if (request.getAddress() != null) {
-            client.setAddress(request.getAddress());
-        }
-        if (request.getCity() != null) {
-            client.setCity(request.getCity());
-        }
-        if (request.getContactPersonName() != null) {
-            client.setContactPersonName(request.getContactPersonName());
-        }
-        if (request.getContactPersonEmail() != null) {
-            client.setContactPersonEmail(request.getContactPersonEmail());
-        }
-        if (request.getContactPersonPhone() != null) {
-            client.setContactPersonPhone(request.getContactPersonPhone());
-        }
-        if (request.getMonthlyBaseFee() != null) {
-            client.setMonthlyBaseFee(BigDecimal.valueOf(request.getMonthlyBaseFee()));
-        }
-        if (request.getOtRatePerHour() != null) {
-            client.setOtRatePerHour(BigDecimal.valueOf(request.getOtRatePerHour()));
-        }
-        if (request.getContractDurationMonths() != null) {
-            client.setContractDurationMonths(request.getContractDurationMonths());
-        }
-        if (request.getRiskLevel() != null) {
-            client.setRiskLevel(RiskLevel.valueOf(request.getRiskLevel()));
-        }
-        if (request.getRecommendedOfficers() != null) {
-            client.setRecommendedOfficers(request.getRecommendedOfficers());
-        }
+        if (request.getCompanyName() != null)            client.setCompanyName(request.getCompanyName());
+        if (request.getVatNumber() != null)              client.setVatNumber(request.getVatNumber());
+        if (request.getAddress() != null)                client.setAddress(request.getAddress());
+        if (request.getServiceLocation() != null)        client.setServiceLocation(request.getServiceLocation());
+        if (request.getCity() != null)                   client.setCity(request.getCity());
+        if (request.getContactPersonName() != null)      client.setContactPersonName(request.getContactPersonName());
+        if (request.getContactPersonDesignation() != null) client.setContactPersonDesignation(request.getContactPersonDesignation());
+        if (request.getContactPersonEmail() != null)     client.setContactPersonEmail(request.getContactPersonEmail());
+        if (request.getContactPersonPhone() != null)     client.setContactPersonPhone(request.getContactPersonPhone());
+        if (request.getOicCount() != null)               client.setOicCount(request.getOicCount());
+        if (request.getJsoCount() != null)               client.setJsoCount(request.getJsoCount());
+        if (request.getOicRatePerShift() != null)        client.setOicRatePerShift(request.getOicRatePerShift());
+        if (request.getJsoRatePerShift() != null)        client.setJsoRatePerShift(request.getJsoRatePerShift());
+        if (request.getOtRatePerHour() != null)          client.setOtRatePerHour(request.getOtRatePerHour());
+        if (request.getContractDurationMonths() != null) client.setContractDurationMonths(request.getContractDurationMonths());
+        if (request.getRiskLevel() != null)              client.setRiskLevel(RiskLevel.valueOf(request.getRiskLevel()));
+        if (request.getRecommendedOfficers() != null)    client.setRecommendedOfficers(request.getRecommendedOfficers());
 
         client.setUpdatedAt(LocalDateTime.now());
-        Client updatedClient = clientRepository.save(client);
-
-        return mapToResponse(updatedClient);
+        return mapToResponse(clientRepository.save(client));
     }
 
     @Transactional
     public void suspendClient(Integer clientId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", "id", clientId));
-
         client.setStatus(ClientStatus.SUSPENDED);
         clientRepository.save(client);
     }
@@ -156,7 +160,6 @@ public class ClientService {
     public void terminateClient(Integer clientId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", "id", clientId));
-
         client.setStatus(ClientStatus.TERMINATED);
         clientRepository.save(client);
     }
@@ -165,75 +168,120 @@ public class ClientService {
     public void reactivateClient(Integer clientId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", "id", clientId));
-
         client.setStatus(ClientStatus.ACTIVE);
         clientRepository.save(client);
     }
 
-    // Helper methods
+    /**
+     * Phase 17 — Renew contract after offline signing.
+     * Adds additionalMonths to the existing contract duration and reactivates if suspended/expired.
+     */
+    @Transactional
+    public ClientResponse renewContract(Integer clientId, int additionalMonths) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", clientId));
+
+        int currentMonths = client.getContractDurationMonths() != null ? client.getContractDurationMonths() : 0;
+        client.setContractDurationMonths(currentMonths + additionalMonths);
+        client.setStatus(ClientStatus.ACTIVE);
+        client.setUpdatedAt(LocalDateTime.now());
+
+        return mapToResponse(clientRepository.save(client));
+    }
+
+    /**
+     * Mandatory password change — enforced on first login.
+     */
+    @Transactional
+    public void changePassword(Integer clientId, ChangePasswordRequest request) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", clientId));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), client.getPasswordHash())) {
+            throw new InvalidOperationException("Current password is incorrect");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new InvalidOperationException("New password and confirm password do not match");
+        }
+
+        client.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        client.setIsFirstLogin(false);
+        client.setUpdatedAt(LocalDateTime.now());
+        clientRepository.save(client);
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────────
+
     private String generateUsername(String companyName) {
-        String cleaned = companyName.toLowerCase()
-                .replaceAll("[^a-z0-9]", "");
+        String cleaned = companyName.toLowerCase().replaceAll("[^a-z0-9]", "");
+        String base = cleaned.substring(0, Math.min(10, cleaned.length()));
+        if (base.isEmpty()) base = "client";
 
-        String baseUsername = cleaned.substring(0, Math.min(10, cleaned.length()));
-
-        // Handle empty result (company name had no alphanumeric chars)
-        if (baseUsername.isEmpty()) {
-            baseUsername = "client";
-        }
-
-        String username = baseUsername;
+        String username = base;
         int counter = 1;
-
         while (clientRepository.existsByUsername(username)) {
-            username = baseUsername + counter++;
+            username = base + counter++;
         }
-
         return username;
     }
 
+    private String generateClientCode() {
+        int year = Year.now().getValue();
+        long count = clientRepository.count() + 1;
+        return String.format("ACE-%d-%03d", year, count);
+    }
+
     private String generateRandomPassword() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$";
         Random random = new Random();
-        StringBuilder password = new StringBuilder();
-
-        for (int i = 0; i < 12; i++) {
-            password.append(chars.charAt(random.nextInt(chars.length())));
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
         }
-
-        return password.toString();
+        return sb.toString();
     }
 
     private ClientResponse mapToResponse(Client client) {
         ClientResponse response = new ClientResponse();
         response.setClientId(client.getClientId());
+        response.setClientCode(client.getClientCode());
         response.setCompanyName(client.getCompanyName());
         response.setCompanyRegistrationNo(client.getCompanyRegistrationNo());
+        response.setVatNumber(client.getVatNumber());
         response.setIndustryType(client.getIndustryType());
         response.setAddress(client.getAddress());
+        response.setServiceLocation(client.getServiceLocation());
         response.setCity(client.getCity());
         response.setContactPersonName(client.getContactPersonName());
+        response.setContactPersonDesignation(client.getContactPersonDesignation());
         response.setContactPersonEmail(client.getContactPersonEmail());
         response.setContactPersonPhone(client.getContactPersonPhone());
         response.setUsername(client.getUsername());
         response.setServiceStartDate(client.getServiceStartDate());
         response.setContractDurationMonths(client.getContractDurationMonths());
-        response.setMonthlyBaseFee(client.getMonthlyBaseFee().doubleValue());
-        response.setOtRatePerHour(client.getOtRatePerHour().doubleValue());
-        response.setRiskLevel(client.getRiskLevel().toString());
+        response.setContractEndDate(client.getContractEndDate());
+        response.setOicCount(client.getOicCount());
+        response.setJsoCount(client.getJsoCount());
+        response.setOicRatePerShift(client.getOicRatePerShift());
+        response.setJsoRatePerShift(client.getJsoRatePerShift());
+        response.setOtRatePerHour(client.getOtRatePerHour());
+        response.setRiskLevel(client.getRiskLevel() != null ? client.getRiskLevel().toString() : null);
         response.setRecommendedOfficers(client.getRecommendedOfficers());
         response.setStatus(client.getStatus().toString());
         response.setRegisteredAt(client.getRegisteredAt());
         response.setUpdatedAt(client.getUpdatedAt());
 
-        // Calculate active officers count
         long activeOfficers = assignedOfficerRepository.countActiveOfficersForClient(client.getClientId());
         response.setActiveOfficersCount((int) activeOfficers);
 
-        // Calculate total outstanding
-        Double outstanding = invoiceRepository.getTotalOutstandingAmount();
-        response.setTotalOutstanding(outstanding != null ? outstanding : 0.0);
+        // Outstanding is specific to this client's invoices
+        List<Invoice> pendingInvoices = invoiceRepository.findPendingInvoicesByClient(client.getClientId());
+        double outstanding = pendingInvoices.stream()
+                .mapToDouble(i -> i.getBalanceAmount() != null ? i.getBalanceAmount().doubleValue() : 0.0)
+                .sum();
+        response.setTotalOutstanding(outstanding);
 
+        // NOTE: temporaryPassword intentionally not set — sent via email only
         return response;
     }
 }

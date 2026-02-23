@@ -45,6 +45,7 @@ public class EmailLog {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    // Related entity ID — e.g. invoiceId, paymentId, clientId
     @Column(name = "related_id")
     private Integer relatedId;
 }
