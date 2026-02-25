@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface JobVacancyRepository extends JpaRepository<JobVacancy, Long> {
 
-    // Get all open vacancies for public display
+    // Get all open vacancies for public display.
     List<JobVacancy> findByStatus(VacancyStatus status);
 
     // Get vacancies by experience level

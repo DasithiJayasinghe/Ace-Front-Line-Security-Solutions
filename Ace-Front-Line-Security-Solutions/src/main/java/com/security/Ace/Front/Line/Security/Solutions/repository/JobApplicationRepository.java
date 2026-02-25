@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
 
-    // Get all applications for a specific vacancy
+    // Get all applications for a specific vacancy.
     List<JobApplication> findByVacancyId(Long vacancyId);
 
     // Get all applications by status

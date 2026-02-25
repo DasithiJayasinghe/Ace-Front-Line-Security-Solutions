@@ -27,7 +27,7 @@ public class JobVacancy {
     private String requirements;
 
     @Column(nullable = false)
-    private String experienceLevel; // ENTRY, INTERMEDIATE, SENIOR, EXPERT
+    private String experienceLevel; // ENTRY, INTERMEDIATE, SENIOR, EXPERT.
 
     @Column(nullable = false)
     private String location;

@@ -47,7 +47,7 @@ public class JobApplicationDTO {
 
     private String updatedDate;
 
-    // interview information (optional)
+    // interview information. (optional)
     private String interviewDateTime;
     private String interviewLocation;
 

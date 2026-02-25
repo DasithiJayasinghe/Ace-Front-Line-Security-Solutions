@@ -21,7 +21,7 @@ public class JobVacancyDTO {
     private String requirements;
 
     @NotBlank(message = "Experience level is required")
-    private String experienceLevel; // ENTRY, INTERMEDIATE, SENIOR, EXPERT
+    private String experienceLevel; // ENTRY, INTERMEDIATE, SENIOR, EXPERT.
 
     @NotBlank(message = "Location is required")
     private String location;

@@ -21,7 +21,7 @@ public class VacancyService {
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * Get all open vacancies for public display
+     * Get all open vacancies for public display.
      */
     public List<JobVacancyDTO> getPublicVacancies() {
         List<JobVacancy> vacancies = vacancyRepository.findByStatus(VacancyStatus.OPEN);

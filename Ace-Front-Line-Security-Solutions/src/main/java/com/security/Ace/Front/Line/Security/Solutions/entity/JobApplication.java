@@ -38,7 +38,7 @@ public class JobApplication {
     @Column(nullable = false)
     private String cvFilePath;
 
-    // certificate is optional, column may be null when none uploaded
+    // certificate is optional, column may be null when none uploaded,
     @Column(nullable = true)
     private String certificateFilePath;
 

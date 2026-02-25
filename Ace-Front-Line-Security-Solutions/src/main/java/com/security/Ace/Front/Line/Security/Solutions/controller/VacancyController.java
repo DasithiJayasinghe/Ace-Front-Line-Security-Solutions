@@ -51,7 +51,7 @@ public class VacancyController {
     }
 
     /**
-     * Get open vacancies by experience level (Public endpoint)
+     * Get open vacancies by experience level (Public endpoint).
      */
     @GetMapping("/public/vacancies/experience/{experienceLevel}")
     public ResponseEntity<ApiResponseDTO<List<JobVacancyDTO>>> getPublicVacanciesByExperienceLevel(

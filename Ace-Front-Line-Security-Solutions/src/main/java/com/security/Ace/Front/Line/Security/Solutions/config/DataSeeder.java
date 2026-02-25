@@ -22,7 +22,7 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Only seed data if no vacancies exist
+        // Only seed data if no vacancies exist.
         if (vacancyRepository.count() == 0) {
             seedJobVacancies();
         }

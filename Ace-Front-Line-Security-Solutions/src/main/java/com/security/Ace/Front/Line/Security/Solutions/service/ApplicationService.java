@@ -33,7 +33,7 @@ public class ApplicationService {
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * Submit a new job application
+     * Submit a new job application,
      */
     public JobApplicationDTO submitApplication(JobApplicationDTO applicationDTO, MultipartFile cvFile, MultipartFile certificateFile) {
         // Validate vacancy exists
