@@ -26,7 +26,7 @@ public class DataSeeder implements CommandLineRunner {
         if (vacancyRepository.count() == 0) {
             seedJobVacancies();
         }
-        // seed inquiries if empty
+        // seed inquiries if empty.
         if (serviceInquiryRepository.count() == 0) {
             seedServiceInquiries();
         }
