@@ -1,6 +1,7 @@
 package com.security.Ace.Front.Line.Security.Solutions.util;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -9,62 +10,88 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 @Component
 public class JwtUtil {
 
     @Value("${jwt.secret}")
-    private String SECRET_KEY;
+    private String secret;
 
-    @Value("${jwt.expiration}")
-    private long JWT_TOKEN_VALIDITY;
+    @Value("${jwt.expiration-ms:86400000}")
+    private long expirationMs;
 
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    // ── Token Generation ─────────────────────────────────────────────────────
+
+    /** Staff token — subject = email */
+    public String generateStaffToken(String email, String role) {
+        return buildToken(email, role);
     }
 
-    public String generateToken(String email, String role) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("role", role);
+    /** Client token — subject = "CLIENT:<clientId>" */
+    public String generateClientToken(Integer clientId, String role) {
+        return buildToken("CLIENT:" + clientId, role);
+    }
+
+    /** Generic — kept for backwards compatibility */
+    public String generateToken(String subject, String role) {
+        return buildToken(subject, role);
+    }
+
+    // ── Token Validation ─────────────────────────────────────────────────────
+
+    public boolean isTokenValid(String token) {
+        try {
+            getClaims(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    public String extractSubject(String token) {
+        try {
+            return getClaims(token).getSubject();
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    public String extractRole(String token) {
+        try {
+            return getClaims(token).get("role", String.class);
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    public Date extractExpiration(String token) {
+        return getClaims(token).getExpiration();
+    }
+
+    // ── Private Helpers ──────────────────────────────────────────────────────
+
+    private String buildToken(String subject, String role) {
+        Date now    = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
-                .addClaims(claims)
-                .setSubject(email)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY))
+                .setSubject(subject)
+                .claim("role", role)
+                .setIssuedAt(now)
+                .setExpiration(expiry)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public String extractEmail(String token) {
-        Claims claims = Jwts.parserBuilder()
+    private Claims getClaims(String token) {
+        return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-        return claims.getSubject();
     }
 
-    public String extractRole(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-        return claims.get("role", String.class);
-    }
-
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 }

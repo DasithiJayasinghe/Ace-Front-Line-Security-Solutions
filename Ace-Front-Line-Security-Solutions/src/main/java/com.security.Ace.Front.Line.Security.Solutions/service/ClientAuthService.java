@@ -18,12 +18,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ClientAuthService {
 
-    private final ClientRepository clientRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+    private final ClientRepository  clientRepository;
+    private final PasswordEncoder   passwordEncoder;
+    private final JwtUtil           jwtUtil;
 
     @Transactional
     public ClientLoginResponse login(ClientLoginRequest request) {
+
         Client client = clientRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new AuthenticationException("Invalid credentials"));
 
@@ -31,22 +32,22 @@ public class ClientAuthService {
             throw new AuthenticationException("Invalid credentials");
         }
 
-        // Check account status
-        if (client.getStatus() == ClientStatus.SUSPENDED) {
-            throw new AuthenticationException("Your account has been suspended. Please contact Ace Front Line Security.");
-        }
-        if (client.getStatus() == ClientStatus.TERMINATED) {
-            throw new AuthenticationException("Your account has been terminated.");
-        }
-        if (client.getStatus() == ClientStatus.EXPIRED) {
-            throw new AuthenticationException("Your contract has expired. Please contact us to renew your service.");
+        // ── Status checks ─────────────────────────────────────────────────────
+        switch (client.getStatus()) {
+            case SUSPENDED  -> throw new AuthenticationException(
+                    "Your account has been suspended. Please contact Ace Front Line Security.");
+            case TERMINATED -> throw new AuthenticationException(
+                    "Your account has been terminated.");
+            case EXPIRED    -> throw new AuthenticationException(
+                    "Your contract has expired. Please contact us to renew your service.");
+            default         -> { /* ACTIVE — continue */ }
         }
 
-        // Update last login timestamp
+        // ── Update last login ─────────────────────────────────────────────────
         client.setLastLoginAt(LocalDateTime.now());
         clientRepository.save(client);
 
-        // Generate JWT — client token subject = "CLIENT:<clientId>"
+        // ── Generate JWT — subject = "CLIENT:<clientId>" ──────────────────────
         String token = jwtUtil.generateClientToken(client.getClientId(), "CLIENT");
 
         return new ClientLoginResponse(
