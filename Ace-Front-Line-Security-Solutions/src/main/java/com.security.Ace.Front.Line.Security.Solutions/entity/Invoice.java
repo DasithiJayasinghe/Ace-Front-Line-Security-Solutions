@@ -3,7 +3,9 @@ package com.security.Ace.Front.Line.Security.Solutions.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,6 +28,8 @@ public class Invoice {
     @Column(name = "invoice_number", unique = true, nullable = false, length = 50)
     private String invoiceNumber;
 
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
@@ -39,16 +43,16 @@ public class Invoice {
 
     // Explicit service period dates printed on invoice
     @Column(name = "period_from", nullable = false)
-    private LocalDate periodFrom;   // e.g., 2026-01-01
+    private LocalDate periodFrom;
 
     @Column(name = "period_to", nullable = false)
-    private LocalDate periodTo;     // e.g., 2026-01-31
+    private LocalDate periodTo;
 
     // Date invoice was generated (1st of the month)
     @Column(name = "issue_date", nullable = false)
     private LocalDate issueDate;
 
-    // Payment due date (15th of the month)
+    // Payment due date
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
 
@@ -90,7 +94,7 @@ public class Invoice {
     @Column(name = "balance_amount", precision = 12, scale = 2)
     private BigDecimal balanceAmount = BigDecimal.ZERO;
 
-    // 1.5% per month, applied on the 20th after grace period
+    // 1.5% per month, applied after grace period
     @Column(name = "late_fee", precision = 12, scale = 2)
     private BigDecimal lateFee = BigDecimal.ZERO;
 
@@ -143,12 +147,21 @@ public class Invoice {
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
 
+    // ── Relationships — excluded from toString/equals to prevent
+    //    LazyInitializationException ────────────────────────────────────────
+
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<InvoiceItem> items;
 
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Payment> payments;
 
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Deduction> deductions;
 }
