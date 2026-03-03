@@ -29,7 +29,7 @@ const StaffLogin = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch("http://localhost:8080/api/auth/staff/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -40,7 +40,6 @@ const StaffLogin = () => {
       if (response.ok) {
         const data = await response.json();
 
-        // ✅ Save token and user info to localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
         localStorage.setItem('email', email);
