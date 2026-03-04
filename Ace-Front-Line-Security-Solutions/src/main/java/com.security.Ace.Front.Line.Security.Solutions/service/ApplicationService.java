@@ -6,14 +6,18 @@ import com.security.Ace.Front.Line.Security.Solutions.dto.ApplicationStatusUpdat
 import com.security.Ace.Front.Line.Security.Solutions.entity.JobApplication;
 import com.security.Ace.Front.Line.Security.Solutions.entity.JobApplication.ApplicationStatus;
 import com.security.Ace.Front.Line.Security.Solutions.entity.JobVacancy;
+import com.security.Ace.Front.Line.Security.Solutions.entity.Interview;
 import com.security.Ace.Front.Line.Security.Solutions.repository.JobApplicationRepository;
 import com.security.Ace.Front.Line.Security.Solutions.repository.JobVacancyRepository;
+import com.security.Ace.Front.Line.Security.Solutions.repository.InterviewRepository;
 import com.security.Ace.Front.Line.Security.Solutions.util.ResourceNotFoundException;
 import com.security.Ace.Front.Line.Security.Solutions.util.FileUploadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +33,9 @@ public class ApplicationService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private InterviewRepository interviewRepository;
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -156,16 +163,29 @@ public class ApplicationService {
                 interviewDTO.getInterviewLocation()
         );
 
+        // Parse date and time
+        LocalDate date = LocalDate.parse(interviewDTO.getInterviewDate());
+        LocalTime time = LocalTime.parse(interviewDTO.getInterviewTime());
+        LocalDateTime dateTime = LocalDateTime.of(date, time);
+
+        // Find existing interview with same vacancy/date/time/location, or create new one
+        Interview savedInterview = interviewRepository
+                .findByVacancyIdAndInterviewDateAndInterviewTimeAndInterviewLocation(
+                        application.getVacancyId(), date, time, interviewDTO.getInterviewLocation())
+                .orElseGet(() -> {
+                    Interview newInterview = new Interview();
+                    newInterview.setVacancyId(application.getVacancyId());
+                    newInterview.setInterviewDate(date);
+                    newInterview.setInterviewTime(time);
+                    newInterview.setInterviewLocation(interviewDTO.getInterviewLocation());
+                    return interviewRepository.save(newInterview);
+                });
+
         // Update application with interview details and status
         application.setApplicationStatus(ApplicationStatus.INTERVIEW_SENT);
-        // parse date/time strings into LocalDateTime if possible
-        try {
-            LocalDateTime dt = LocalDateTime.parse(interviewDTO.getInterviewDate() + " " + interviewDTO.getInterviewTime(), formatter);
-            application.setInterviewDateTime(dt);
-        } catch (Exception e) {
-            // ignore parsing errors, leave null
-        }
+        application.setInterviewDateTime(dateTime);
         application.setInterviewLocation(interviewDTO.getInterviewLocation());
+        application.setInterviewId(savedInterview.getId());
 
         JobApplication updatedApplication = applicationRepository.save(application);
 
@@ -188,19 +208,27 @@ public class ApplicationService {
     /**
      * Mark application as selected (Director/Executive)
      */
-    public JobApplicationDTO selectApplication(Long id) {
+    public JobApplicationDTO selectApplication(Long id, String reportDate) {
         JobApplication application = applicationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + id));
         application.setApplicationStatus(ApplicationStatus.SELECTED);
-        // optionally notify operational manager
+
         String vacancyTitle = vacancyRepository.findById(application.getVacancyId())
                 .map(JobVacancy::getJobTitle)
-                .orElse("");
-        emailService.sendSimpleEmail(
-                "operations@acefrontline.com",
-                "Candidate Selected: " + application.getFullName(),
-                "The following candidate has been selected for vacancy '" + vacancyTitle + "' (ID " + application.getVacancyId() + ")."
-        );
+                .orElse("the applied position");
+
+        // Send selection email to the applicant
+        try {
+            emailService.sendSelectionEmail(
+                    application.getEmail(),
+                    application.getFullName(),
+                    vacancyTitle,
+                    reportDate
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send selection email to applicant: " + e.getMessage());
+        }
+
         JobApplication updatedApplication = applicationRepository.save(application);
         return convertToDTO(updatedApplication);
     }

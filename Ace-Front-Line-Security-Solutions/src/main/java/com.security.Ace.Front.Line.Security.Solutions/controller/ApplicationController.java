@@ -4,9 +4,15 @@ import com.security.Ace.Front.Line.Security.Solutions.dto.JobApplicationDTO;
 import com.security.Ace.Front.Line.Security.Solutions.dto.ApplicationStatusUpdateDTO;
 import com.security.Ace.Front.Line.Security.Solutions.dto.InterviewEmailDTO;
 import com.security.Ace.Front.Line.Security.Solutions.dto.ApiResponseDTO;
+import com.security.Ace.Front.Line.Security.Solutions.entity.JobApplication;
+import com.security.Ace.Front.Line.Security.Solutions.repository.JobApplicationRepository;
 import com.security.Ace.Front.Line.Security.Solutions.service.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -14,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -24,6 +32,9 @@ public class ApplicationController {
 
     @Autowired
     private ApplicationService applicationService;
+
+    @Autowired
+    private JobApplicationRepository jobApplicationRepository;
 
     /**
      * Submit a new job application (Public endpoint)
@@ -245,7 +256,7 @@ public class ApplicationController {
      * Get interviewees for director/executive (applications with interview scheduled)
      */
     @GetMapping("/interviewees")
-    @PreAuthorize("hasRole('DIRECTOR') or hasRole('EXECUTIVE')")
+    @PreAuthorize("hasRole('OPERATIONAL_MANAGER') or hasRole('ADMIN') or hasRole('DIRECTOR') or hasRole('EXECUTIVE')")
     public ResponseEntity<ApiResponseDTO<List<JobApplicationDTO>>> getInterviewees() {
         List<JobApplicationDTO> list = applicationService.getInterviewList();
         ApiResponseDTO<List<JobApplicationDTO>> response = new ApiResponseDTO<>(
@@ -260,9 +271,12 @@ public class ApplicationController {
      * Mark an application selected (Director/Executive)
      */
     @PutMapping("/{id}/select")
-    @PreAuthorize("hasRole('DIRECTOR') or hasRole('EXECUTIVE')")
-    public ResponseEntity<ApiResponseDTO<JobApplicationDTO>> selectApplication(@PathVariable Long id) {
-        JobApplicationDTO dto = applicationService.selectApplication(id);
+    @PreAuthorize("hasRole('OPERATIONAL_MANAGER') or hasRole('ADMIN') or hasRole('DIRECTOR') or hasRole('EXECUTIVE')")
+    public ResponseEntity<ApiResponseDTO<JobApplicationDTO>> selectApplication(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        String reportDate = (body != null) ? body.get("reportDate") : null;
+        JobApplicationDTO dto = applicationService.selectApplication(id, reportDate);
         ApiResponseDTO<JobApplicationDTO> response = new ApiResponseDTO<>(
                 true,
                 "Application marked as selected",
@@ -284,5 +298,61 @@ public class ApplicationController {
                 list
         );
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Download / view the CV file for a specific application
+     */
+    @GetMapping("/{id}/cv")
+    @PreAuthorize("hasRole('OPERATIONAL_MANAGER') or hasRole('ADMIN') or hasRole('DIRECTOR') or hasRole('EXECUTIVE')")
+    public ResponseEntity<Resource> downloadApplicationCv(@PathVariable Long id) {
+        try {
+            JobApplication application = jobApplicationRepository.findById(id).orElse(null);
+            if (application == null || application.getCvFilePath() == null || application.getCvFilePath().isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            Path filePath = Paths.get(application.getCvFilePath()).toAbsolutePath();
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+            String contentType = "application/octet-stream";
+            String filename = filePath.getFileName().toString();
+            if (filename.endsWith(".pdf")) contentType = "application/pdf";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Download / view the certificate file for a specific application
+     */
+    @GetMapping("/{id}/certificate")
+    @PreAuthorize("hasRole('OPERATIONAL_MANAGER') or hasRole('ADMIN') or hasRole('DIRECTOR') or hasRole('EXECUTIVE')")
+    public ResponseEntity<Resource> downloadApplicationCertificate(@PathVariable Long id) {
+        try {
+            JobApplication application = jobApplicationRepository.findById(id).orElse(null);
+            if (application == null || application.getCertificateFilePath() == null || application.getCertificateFilePath().isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            Path filePath = Paths.get(application.getCertificateFilePath()).toAbsolutePath();
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+            String contentType = "application/octet-stream";
+            String filename = filePath.getFileName().toString();
+            if (filename.endsWith(".pdf")) contentType = "application/pdf";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

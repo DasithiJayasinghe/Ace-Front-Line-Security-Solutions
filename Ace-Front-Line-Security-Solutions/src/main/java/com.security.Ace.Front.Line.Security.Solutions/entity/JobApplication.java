@@ -62,6 +62,13 @@ public class JobApplication {
     @Column(name = "interview_location", columnDefinition = "LONGTEXT")
     private String interviewLocation;
 
+    @Column(name = "interview_id")
+    private Long interviewId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "interview_id", insertable = false, updatable = false)
+    private Interview interview;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vacancy_id", insertable = false, updatable = false)
     private JobVacancy jobVacancy;
@@ -207,4 +214,20 @@ public class JobApplication {
 
     public void setInterviewLocation(String interviewLocation) {
         this.interviewLocation = interviewLocation;
+    }
+
+    public Long getInterviewId() {
+        return interviewId;
+    }
+
+    public void setInterviewId(Long interviewId) {
+        this.interviewId = interviewId;
+    }
+
+    public Interview getInterview() {
+        return interview;
+    }
+
+    public void setInterview(Interview interview) {
+        this.interview = interview;
     }}
