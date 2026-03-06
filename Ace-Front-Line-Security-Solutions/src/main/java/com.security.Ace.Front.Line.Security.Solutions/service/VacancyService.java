@@ -7,6 +7,7 @@ import com.security.Ace.Front.Line.Security.Solutions.repository.JobVacancyRepos
 import com.security.Ace.Front.Line.Security.Solutions.util.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -64,6 +65,7 @@ public class VacancyService {
     /**
      * Create a new vacancy (Admin only)
      */
+    @Transactional
     public JobVacancyDTO createVacancy(JobVacancyDTO vacancyDTO) {
         // Salary fields may be null when the UI does not supply them; default to zero
         Double minSalary = vacancyDTO.getMinSalary() != null ? vacancyDTO.getMinSalary() : 0.0;
@@ -89,6 +91,7 @@ public class VacancyService {
     /**
      * Update an existing vacancy (Admin only)
      */
+    @Transactional
     public JobVacancyDTO updateVacancy(Long id, JobVacancyDTO vacancyDTO) {
         JobVacancy vacancy = vacancyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vacancy not found with id: " + id));
@@ -116,6 +119,7 @@ public class VacancyService {
     /**
      * Delete a vacancy (Admin only)
      */
+    @Transactional
     public void deleteVacancy(Long id) {
         if (!vacancyRepository.existsById(id)) {
             throw new ResourceNotFoundException("Vacancy not found with id: " + id);
@@ -126,6 +130,7 @@ public class VacancyService {
     /**
      * Close a vacancy (Admin only)
      */
+    @Transactional
     public JobVacancyDTO closeVacancy(Long id) {
         JobVacancy vacancy = vacancyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vacancy not found with id: " + id));

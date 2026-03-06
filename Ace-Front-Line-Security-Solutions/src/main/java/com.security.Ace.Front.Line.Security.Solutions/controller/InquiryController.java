@@ -172,4 +172,34 @@ public class InquiryController {
         );
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Send a service inquiry document to administration (director, executive, chairman)
+     */
+    @PutMapping("/service/{id}/send-to-admin")
+    @PreAuthorize("hasRole('OPERATIONAL_MANAGER') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponseDTO<ServiceInquiryDTO>> sendToAdmin(@PathVariable Long id) {
+        ServiceInquiryDTO updated = inquiryService.sendToAdministration(id);
+        ApiResponseDTO<ServiceInquiryDTO> response = new ApiResponseDTO<>(
+                true,
+                "Document sent to administration",
+                updated
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get service inquiries sent to administration (for director, executive, chairman)
+     */
+    @GetMapping("/admin/service-documents")
+    @PreAuthorize("hasRole('DIRECTOR') or hasRole('EXECUTIVE') or hasRole('CHAIRMAN') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponseDTO<List<ServiceInquiryDTO>>> getAdminServiceDocuments() {
+        List<ServiceInquiryDTO> list = inquiryService.getAdminServiceInquiries();
+        ApiResponseDTO<List<ServiceInquiryDTO>> response = new ApiResponseDTO<>(
+                true,
+                "Admin service documents retrieved",
+                list
+        );
+        return ResponseEntity.ok(response);
+    }
 }

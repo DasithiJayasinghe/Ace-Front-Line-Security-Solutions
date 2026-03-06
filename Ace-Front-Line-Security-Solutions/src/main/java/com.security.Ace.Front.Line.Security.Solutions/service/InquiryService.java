@@ -152,6 +152,25 @@ public class InquiryService {
         return convertServiceToDTO(saved);
     }
 
+    /**
+     * Send document to administration (director, executive, chairman)
+     */
+    public ServiceInquiryDTO sendToAdministration(Long id) {
+        ServiceInquiry inquiry = serviceInquiryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Service inquiry not found with id: " + id));
+        inquiry.setSentToAdmin(true);
+        ServiceInquiry saved = serviceInquiryRepository.save(inquiry);
+        return convertServiceToDTO(saved);
+    }
+
+    /**
+     * Get all service inquiries sent to administration
+     */
+    public List<ServiceInquiryDTO> getAdminServiceInquiries() {
+        return serviceInquiryRepository.findBySentToAdminTrue()
+                .stream().map(this::convertServiceToDTO).collect(Collectors.toList());
+    }
+
     private ServiceInquiryDTO convertServiceToDTO(ServiceInquiry inquiry) {
         ServiceInquiryDTO dto = new ServiceInquiryDTO();
         dto.setId(inquiry.getId());
@@ -172,6 +191,7 @@ public class InquiryService {
         }
         dto.setReplyMessage(inquiry.getReplyMessage());
         dto.setDocumentNotes(inquiry.getDocumentNotes());
+        dto.setSentToAdmin(inquiry.getSentToAdmin() != null ? inquiry.getSentToAdmin() : false);
         return dto;
     }
 

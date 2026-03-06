@@ -51,6 +51,8 @@ public class ServiceInquiryDTO {
 
     private String documentNotes;
 
+    private Boolean sentToAdmin;
+
     // Getters
     public Long getId() {
         return id;
@@ -116,6 +118,10 @@ public class ServiceInquiryDTO {
         return documentNotes;
     }
 
+    public Boolean getSentToAdmin() {
+        return sentToAdmin;
+    }
+
     // Setters
     public void setId(Long id) {
         this.id = id;
@@ -179,5 +185,9 @@ public class ServiceInquiryDTO {
 
     public void setDocumentNotes(String documentNotes) {
         this.documentNotes = documentNotes;
+    }
+
+    public void setSentToAdmin(Boolean sentToAdmin) {
+        this.sentToAdmin = sentToAdmin;
     }
 }
