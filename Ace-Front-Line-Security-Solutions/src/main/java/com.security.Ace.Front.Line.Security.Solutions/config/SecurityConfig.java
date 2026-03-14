@@ -50,8 +50,23 @@ public class SecurityConfig {
                                 .password(encoder.encode("exec123"))
                                 .roles("EXECUTIVE")
                                 .build();
+                var accountant = org.springframework.security.core.userdetails.User
+                                .withUsername("accountant")
+                                .password(encoder.encode("acc123"))
+                                .roles("ACCOUNTANT")
+                                .build();
+                var areaManager = org.springframework.security.core.userdetails.User
+                                .withUsername("area_manager")
+                                .password(encoder.encode("area123"))
+                                .roles("AREA_MANAGER")
+                                .build();
+                var chairman = org.springframework.security.core.userdetails.User
+                                .withUsername("chairman")
+                                .password(encoder.encode("chair123"))
+                                .roles("CHAIRMAN")
+                                .build();
                 return new org.springframework.security.provisioning.InMemoryUserDetailsManager(admin, ops, director,
-                                exec);
+                                exec, accountant, areaManager, chairman);
         }
 
         @Bean
@@ -84,6 +99,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/interviews/**").authenticated()
                                                 .requestMatchers("/api/inquiries/**").authenticated()
                                                 .requestMatchers("/api/cv-submissions/**").authenticated()
+                                                .requestMatchers("/api/announcements/**").authenticated()
 
                                                 // All other requests require authentication
                                                 .anyRequest().authenticated())
