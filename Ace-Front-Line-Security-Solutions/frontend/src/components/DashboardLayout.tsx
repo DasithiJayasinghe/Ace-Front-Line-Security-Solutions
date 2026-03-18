@@ -1,93 +1,97 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
-import { Shield, LogOut, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-interface SidebarItem {
-  label: string;
-  path: string;
-}
+import { useState, useEffect } from "react";
+import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import DashboardHeader from "@/components/DashboardHeader";
+import ProfilePage from "@/pages/ProfilePage";
 
 interface DashboardLayoutProps {
   title: string;
   role: string;
-  items: SidebarItem[];
+  items: { label: string; path: string }[];
   basePath: string;
 }
 
-const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps) => {
+export default function DashboardLayout({ title, role, items, basePath }: DashboardLayoutProps) {
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      navigate("/staff-login");
+    }
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("user");
+    toast({ title: "Logged out", description: "You have been logged out successfully" });
+    navigate("/staff-login");
+  };
+
+  const storedRole = localStorage.getItem("role") || "";
+  const isProfile = location.pathname.endsWith("/profile");
+
+  // Determine the active item from the URL
+  const currentPath = location.pathname.replace(basePath + "/", "").replace(basePath, "");
+  const activeItemId = currentPath || "dashboard";
+
+  // Render ProfilePage when on /profile sub-route
+  if (isProfile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <ProfilePage />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 bg-charcoal text-charcoal-foreground flex flex-col shrink-0">
-        <div className="p-6 border-b border-charcoal-foreground/10">
-          <Link to="/" className="flex items-center gap-3">
-            <Shield className="h-7 w-7 text-primary" />
-            <div className="leading-none">
-              <p className="font-extrabold text-sm uppercase tracking-tight">Ace Front Line</p>
-              <p className="text-[9px] tracking-[0.2em] text-charcoal-foreground/50 uppercase mt-0.5">{role}</p>
-            </div>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <DashboardHeader
+        userName={user?.fullName || title}
+        userRole={role}
+        onLogout={handleLogout}
+        userId={user?.userId || 0}
+        backendRole={storedRole}
+        profilePath={`${basePath}/profile`}
+      />
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {items.map((item) => {
-            const fullPath = `${basePath}/${item.path}`;
-            const isActive = location.pathname === fullPath || (item.path === "dashboard" && location.pathname === basePath);
-            return (
-              <Link
-                key={item.path}
-                to={fullPath}
-                className={cn(
-                  "block px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-charcoal-foreground/70 hover:bg-charcoal-foreground/5 hover:text-charcoal-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 border-t border-charcoal-foreground/10 space-y-2">
-          <Link to={`${basePath}/profile`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal-foreground/70 hover:bg-charcoal-foreground/5 hover:text-charcoal-foreground transition-all">
-            <User className="h-4 w-4" /> Profile
-          </Link>
-          <Link to="/" className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all">
-            <LogOut className="h-4 w-4" /> Logout
-          </Link>
+      {/* Tab Navigation */}
+      <div className="sticky top-16 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <nav className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
+            {items.map((item) => {
+              const isActive = activeItemId === item.path || (activeItemId === "dashboard" && item.path === "dashboard");
+              return (
+                <Link
+                  key={item.path}
+                  to={`${basePath}/${item.path}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
+                    isActive
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-      </aside>
+      </div>
 
-      {/* Main content */}
-      <main className="flex-1 bg-background">
-        <header className="h-16 border-b bg-card px-8 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-foreground">{title}</h1>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">{role}</p>
-              <p className="text-[10px] text-muted-foreground">Logged in</p>
-            </div>
-            <Link to={`${basePath}/profile`}>
-              <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                  {role.split(" ").map(w => w[0]).join("").slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          </div>
-        </header>
-        <div className="p-8">
-          <Outlet />
-        </div>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <Outlet />
       </main>
     </div>
   );
-};
-
-export default DashboardLayout;
+}
