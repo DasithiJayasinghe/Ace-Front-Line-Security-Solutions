@@ -4,9 +4,15 @@ import com.security.Ace.Front.Line.Security.Solutions.dto.PayrollDetailDTO;
 import com.security.Ace.Front.Line.Security.Solutions.dto.SalaryTrendsDTO;
 import com.security.Ace.Front.Line.Security.Solutions.dto.PayrollRequestDTO;
 import com.security.Ace.Front.Line.Security.Solutions.dto.PayrollResponseDTO;
+import com.security.Ace.Front.Line.Security.Solutions.dto.AdvanceResponseDTO;
 import com.security.Ace.Front.Line.Security.Solutions.entity.Salary;
 import com.security.Ace.Front.Line.Security.Solutions.entity.SalaryAllowance;
 import com.security.Ace.Front.Line.Security.Solutions.entity.SalaryDeduction;
+import com.security.Ace.Front.Line.Security.Solutions.entity.Notification;
+import com.security.Ace.Front.Line.Security.Solutions.entity.User;
+import com.security.Ace.Front.Line.Security.Solutions.repository.UserRepository;
+import com.security.Ace.Front.Line.Security.Solutions.repository.MonthlyStatisticsRepository;
+import com.security.Ace.Front.Line.Security.Solutions.entity.MonthlyStatistics;
 import com.security.Ace.Front.Line.Security.Solutions.service.SalaryService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import com.security.Ace.Front.Line.Security.Solutions.entity.AdvanceRequest;
+import com.security.Ace.Front.Line.Security.Solutions.enums.RequestStatus;
 import com.security.Ace.Front.Line.Security.Solutions.repository.AdvanceRequestRepository;
 import com.security.Ace.Front.Line.Security.Solutions.util.PdfGenerator;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.time.LocalDate;
+import lombok.Data;
 
 @RestController
 @RequestMapping("/api/payroll")
@@ -30,14 +38,20 @@ public class PayrollRestController {
 
     private final SalaryService salaryService;
     private final AdvanceRequestRepository advanceRequestRepository;
+    private final UserRepository userRepository;
     private final PdfGenerator pdfGenerator;
+    private final MonthlyStatisticsRepository monthlyStatisticsRepository;
 
     public PayrollRestController(SalaryService salaryService,
             AdvanceRequestRepository advanceRequestRepository,
-            PdfGenerator pdfGenerator) {
+            UserRepository userRepository,
+            PdfGenerator pdfGenerator,
+            MonthlyStatisticsRepository monthlyStatisticsRepository) {
         this.salaryService = salaryService;
         this.advanceRequestRepository = advanceRequestRepository;
+        this.userRepository = userRepository;
         this.pdfGenerator = pdfGenerator;
+        this.monthlyStatisticsRepository = monthlyStatisticsRepository;
     }
 
     @GetMapping("/stats")
@@ -48,6 +62,29 @@ public class PayrollRestController {
     @GetMapping("/trends")
     public ResponseEntity<SalaryTrendsDTO> getSalaryTrends(@RequestParam(required = false) Long officerId) {
         return ResponseEntity.ok(salaryService.getSalaryTrends(officerId));
+    }
+
+    @GetMapping("/officer/stats/{officerId}")
+    public ResponseEntity<java.util.Map<String, Object>> getOfficerStats(@PathVariable Long officerId, @RequestParam String month) {
+        try {
+            String[] parts = month.split("-");
+            if (parts.length != 2) return ResponseEntity.badRequest().body(java.util.Map.of());
+            
+            int yearInt = Integer.parseInt(parts[0]);
+            int monthInt = Integer.parseInt(parts[1]);
+
+            java.util.Optional<MonthlyStatistics> stats = monthlyStatisticsRepository.findBySecurityOfficerIdAndYearAndMonth(officerId, yearInt, monthInt);
+            if (stats.isPresent()) {
+                return ResponseEntity.ok(java.util.Map.of(
+                    "monthlyShifts", stats.get().getMonthlyShifts(),
+                    "monthlyOvertimeHours", stats.get().getMonthlyOvertimeHours()
+                ));
+            } else {
+                return ResponseEntity.ok(java.util.Map.of("monthlyShifts", 0, "monthlyOvertimeHours", 0.0));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of());
+        }
     }
 
     @PostMapping("/generate")
@@ -123,10 +160,13 @@ public class PayrollRestController {
 
     @GetMapping("/export")
     @Transactional(readOnly = true)
-    public ResponseEntity<byte[]> exportBankCSV(@RequestParam String month) {
-        List<Salary> salaries = "ALL".equalsIgnoreCase(month)
-                ? salaryService.getCalculatedAcrossAllMonths()
-                : salaryService.getCalculatedForMonth(month);
+    public ResponseEntity<byte[]> exportBankCSV() {
+        if (java.time.LocalDate.now().getDayOfMonth() != 10) {
+            return ResponseEntity.badRequest().body("CSV export is strictly allowed only on the 10th day of the month.".getBytes());
+        }
+
+        String targetMonth = java.time.YearMonth.now().minusMonths(1).toString();
+        List<Salary> salaries = salaryService.getPaidForMonth(targetMonth);
 
         StringBuilder csv = new StringBuilder();
         csv.append("Officer Name,Bank Name,Branch Name,Account Number,Net Salary\n");
@@ -143,7 +183,7 @@ public class PayrollRestController {
         byte[] output = csv.toString().getBytes();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDispositionFormData("attachment", "Bank_Export_" + month + ".csv");
+        headers.setContentDispositionFormData("attachment", "Bank_Export_" + targetMonth + ".csv");
 
         return ResponseEntity.ok()
                 .headers(headers)
@@ -254,21 +294,55 @@ public class PayrollRestController {
 
     @GetMapping("/advances")
     public ResponseEntity<?> getAdvances(@RequestParam(required = false) String status) {
+        List<AdvanceRequest> advances;
         if (status != null) {
             try {
-                return ResponseEntity.ok(advanceRequestRepository
-                        .findByStatus(AdvanceRequest.Status.valueOf(status.toUpperCase())));
+                advances = advanceRequestRepository.findByStatus(RequestStatus.valueOf(status.toUpperCase()));
             } catch (Exception e) {
                 return ResponseEntity.badRequest().body("Invalid status: " + status);
             }
+        } else {
+            advances = advanceRequestRepository.findAll();
         }
+
+        return ResponseEntity.ok(advances.stream().map(this::convertAdvanceToDTO).toList());
+    }
+
+    @GetMapping("/advances/debug")
+    public ResponseEntity<List<AdvanceRequest>> debugAdvances() {
         return ResponseEntity.ok(advanceRequestRepository.findAll());
     }
 
+    private AdvanceResponseDTO convertAdvanceToDTO(AdvanceRequest ar) {
+        AdvanceResponseDTO dto = new AdvanceResponseDTO();
+        dto.setId(ar.getId());
+
+        AdvanceResponseDTO.OfficerDTO officer = new AdvanceResponseDTO.OfficerDTO();
+        if (ar.getUser() != null) {
+            officer.setFullName(ar.getUser().getFullName() != null ? ar.getUser().getFullName() : ar.getUser().getEmail());
+            officer.setOfficerId(String.valueOf(ar.getUser().getId()));
+        } else {
+            officer.setFullName("-");
+            officer.setOfficerId("-");
+        }
+        dto.setOfficer(officer);
+
+        dto.setRequestedDate(ar.getCreatedAt() != null ? ar.getCreatedAt().toLocalDate().toString() : null);
+        dto.setReason(ar.getReason());
+        dto.setRequestedAmount(ar.getAmount());
+        dto.setStatus(ar.getStatus() != null ? ar.getStatus().name() : null);
+        dto.setAdvanceMonth(ar.getForMonth());
+        dto.setPaymentDate(ar.getReviewedAt() != null ? ar.getReviewedAt().toLocalDate().toString() : null);
+        dto.setDeducted(ar.isDeducted());
+        return dto;
+    }
+
     @PostMapping("/advances/approve/{id}")
-    public ResponseEntity<?> approveAdvance(@PathVariable Long id) {
+    public ResponseEntity<?> approveAdvance(@PathVariable Long id, @RequestParam Long reviewerId) {
         try {
-            salaryService.updateAdvanceStatus(id, AdvanceRequest.Status.APPROVED);
+            User reviewer = userRepository.findById(reviewerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Reviewer not found: " + reviewerId));
+            salaryService.handleAreaManagerReview(id, reviewer, true, null);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -276,9 +350,11 @@ public class PayrollRestController {
     }
 
     @PostMapping("/advances/reject/{id}")
-    public ResponseEntity<?> rejectAdvance(@PathVariable Long id) {
+    public ResponseEntity<?> rejectAdvance(@PathVariable Long id, @RequestParam Long reviewerId, @RequestParam String reason) {
         try {
-            salaryService.updateAdvanceStatus(id, AdvanceRequest.Status.REJECTED);
+            User reviewer = userRepository.findById(reviewerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Reviewer not found: " + reviewerId));
+            salaryService.handleAreaManagerReview(id, reviewer, false, reason);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -286,19 +362,59 @@ public class PayrollRestController {
     }
 
     @PostMapping("/advances/pay/{id}")
-    public ResponseEntity<?> markAdvanceAsPaid(@PathVariable Long id) {
+    public ResponseEntity<?> markAdvanceAsPaid(@PathVariable Long id, @RequestParam Long accountantId) {
         try {
-            salaryService.markAdvanceAsPaid(id, LocalDate.now());
+            User accountant = userRepository.findById(accountantId)
+                    .orElseThrow(() -> new IllegalArgumentException("Accountant not found: " + accountantId));
+            salaryService.handleAccountantPayment(id, accountant);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
+    @GetMapping("/notifications/{userId}")
+    public ResponseEntity<List<Notification>> getNotifications(@PathVariable Long userId) {
+        return ResponseEntity.ok(salaryService.getNotifications(userId));
+    }
+
+    @PostMapping("/notifications/read/{id}")
+    public ResponseEntity<Void> markNotificationAsRead(@PathVariable Long id) {
+        salaryService.markNotificationAsRead(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/officer/advances/{officerId}")
-    public ResponseEntity<List<AdvanceRequest>> getOfficerAdvances(@PathVariable Long officerId,
-            @RequestParam String month) {
-        return ResponseEntity.ok(salaryService.getUndeductedPaidAdvances(officerId, month));
+    public ResponseEntity<List<AdvanceResponseDTO>> getOfficerAdvances(@PathVariable Long officerId,
+                                                                       @RequestParam String month) {
+        List<AdvanceRequest> advances = salaryService.getUndeductedPaidAdvances(officerId, month);
+        return ResponseEntity.ok(advances.stream().map(this::convertAdvanceToDTO).collect(Collectors.toList()));
+    }
+
+    @PostMapping("/advances/create")
+    public ResponseEntity<?> createAdvance(@RequestBody AdvanceRequestDTO request) {
+        try {
+            User user = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getUserId()));
+            AdvanceRequest created = salaryService.createAdvanceRequest(
+                    user,
+                    request.getAmount(),
+                    request.getReason(),
+                    request.getForMonth()
+            );
+            return ResponseEntity.ok(convertAdvanceToDTO(created));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // DTO for creating advance
+    @Data
+    public static class AdvanceRequestDTO {
+        private Long userId;
+        private Double amount;
+        private String reason;
+        private String forMonth;
     }
 
     private PayrollDetailDTO convertToDetailDTO(Salary s) {
