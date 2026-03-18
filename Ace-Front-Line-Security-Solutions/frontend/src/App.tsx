@@ -3,89 +3,37 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import LoginRedirect from "./pages/LoginRedirect";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import StaffLogin from "./pages/StaffLogin";
 import ClientLogin from "./pages/ClientLogin";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import DashboardLayout from "./components/DashboardLayout";
 import PlaceholderPage from "./components/PlaceholderPage";
 import Careers from "./pages/Careers";
 import Inquiries from "./pages/Inquiries";
+import AreaManagerDashboard from "./pages/AreaManagerDashboard";
+import ExecutiveOfficerDashboard from "./pages/ExecutiveOfficerDashboard";
+import OperationalManagerDashboard from "./pages/OperationalManagerDashboard";
+import ProfilePage from "./pages/ProfilePage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
+import EditProfile from "./pages/editProfile";
+import AccountantDashboard from "./pages/AccountantDashboard";
+import DirectorDashboard from "./pages/DirectorDashboard";
+import ChairmanDashboard from "./pages/ChairmanDashboard";
+import LoanApproval from "./pages/LoanApproval";
+import LoanDeductions from "./pages/LoanDeduction";
+import DeductionSchedule from "./pages/DeductionSchedule";
+import admin_PayrollPage from "./pages/admin_PayrollPage";
+import admin_PayrollApprovalPage from "./pages/admin_PayrollApprovalPage";
+import admin_PayrollListPage from "./pages/admin_PayrollListPage";
 
 const queryClient = new QueryClient();
-
-const areaManagerItems = [
-  { label: "Dashboard", path: "dashboard" },
-  { label: "Weekly Report", path: "weekly-report" },
-  { label: "Monthly Report", path: "monthly-report" },
-  { label: "Attendance", path: "attendance" },
-  { label: "Monthly Statistics", path: "monthly-statistics" },
-  { label: "Shift Schedule", path: "shift-schedule" },
-  { label: "Leave Management", path: "leave-management" },
-];
-
-const accountantItems = [
-  { label: "Dashboard", path: "dashboard" },
-  { label: "Generate Payroll", path: "generate-payroll" },
-  { label: "Payroll Records", path: "payroll-records" },
-  { label: "Salary Trends", path: "salary-trends" },
-  { label: "Monthly Statistics", path: "monthly-statistics" },
-  { label: "Advance Requests", path: "advance-requests" },
-  { label: "Officers", path: "officers" },
-  { label: "Invoices", path: "invoices" },
-  { label: "Reports", path: "reports" },
-  { label: "Payments", path: "payments" },
-  { label: "Deductions", path: "deductions" },
-  { label: "Loans", path: "loans" },
-];
-
-const securityOfficerItems = [
-  { label: "Dashboard", path: "dashboard" },
-  { label: "Request Leave", path: "request-leave" },
-  { label: "Request Uniform", path: "request-uniform" },
-  { label: "Paysheet View", path: "paysheet-view" },
-  { label: "Salary History", path: "salary-history" },
-  { label: "Shift Schedule", path: "shift-schedule" },
-  { label: "Officer Rosters", path: "officer-rosters" },
-  { label: "Request a Loan", path: "request-loan" },
-];
-
-const operationalManagerItems = [
-  { label: "Dashboard", path: "dashboard" },
-  { label: "Weekly Report", path: "weekly-report" },
-  { label: "Client Management", path: "client-management" },
-  { label: "Staff Management", path: "staff-management" },
-  { label: "Inquiry Management", path: "inquiry-management" },
-  { label: "Interview Management", path: "interview-management" },
-  { label: "Client Feedback Review", path: "client-feedback" },
-  { label: "Request a Leave", path: "request-leave" },
-];
-
-const executiveOfficerItems = [
-  { label: "Dashboard", path: "dashboard" },
-  { label: "Uniform Distribution", path: "uniform-distribution" },
-  { label: "Loan Request View", path: "loan-request-view" },
-  { label: "Request a Leave", path: "request-leave" },
-];
-
-const chairmanItems = [
-  { label: "Dashboard", path: "dashboard" },
-  { label: "Monthly Report", path: "monthly-report" },
-  { label: "Salary Trend", path: "salary-trend" },
-  { label: "Meeting Schedule", path: "meeting-schedule" },
-  { label: "Registration List", path: "registration-list" },
-  { label: "Leave Approval", path: "leave-approval" },
-];
-
-const directorItems = [
-  { label: "Dashboard", path: "dashboard" },
-  { label: "Monthly Report", path: "monthly-report" },
-  { label: "Salary Trend", path: "salary-trend" },
-  { label: "Meeting Schedule", path: "meeting-schedule" },
-  { label: "Registration List", path: "registration-list" },
-  { label: "Leave Approval", path: "leave-approval" },
-];
 
 const clientItems = [
   { label: "Dashboard", path: "dashboard" },
@@ -103,62 +51,77 @@ function renderDashboardRoutes(items: { label: string; path: string }[]) {
       {items.map((item) => (
         <Route key={item.path} path={item.path} element={<PlaceholderPage title={item.label} />} />
       ))}
-      <Route path="profile" element={<PlaceholderPage title="Profile" />} />
+      <Route path="profile" element={<ProfilePage />} />
     </>
   );
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/staff-login" element={<StaffLogin />} />
-          <Route path="/client-login" element={<ClientLogin />} />
-          <Route path="/careers" element={<Careers />} />
-          <Route path="/inquiries" element={<Inquiries />} />
+  <ThemeProvider defaultTheme="dark" storageKey="ace-theme">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <ErrorBoundary>
+          <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth-redirect" element={<LoginRedirect />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/staff-login" element={<StaffLogin />} />
+            <Route path="/client-login" element={<ClientLogin />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/careers" element={<Careers />} />
+            <Route path="/inquiries" element={<Inquiries />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
+            <Route path="/change-password" element={<ProtectedRoute requiredRoles={[]}><ChangePasswordPage /></ProtectedRoute>} />
 
-          <Route path="/area-manager" element={<DashboardLayout title="Area Manager" role="Area Manager" items={areaManagerItems} basePath="/area-manager" />}>
-            {renderDashboardRoutes(areaManagerItems)}
-          </Route>
+            {/* Payroll Routes */}
+            <Route path="/account-executive/payroll/create" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE']}><admin_PayrollPage /></ProtectedRoute>} />
+            <Route path="/account-executive/payroll/bank-submission" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE']}><admin_PayrollListPage /></ProtectedRoute>} />
+            <Route path="/director/payroll/approvals" element={<ProtectedRoute requiredRoles={['DIRECTOR']}><admin_PayrollApprovalPage /></ProtectedRoute>} />
 
-          <Route path="/accountant" element={<DashboardLayout title="Accountant" role="Accountant" items={accountantItems} basePath="/accountant" />}>
-            {renderDashboardRoutes(accountantItems)}
-          </Route>
+            {/* Protected Area Manager Dashboard */}
+            <Route path="/area-manager/*" element={<ProtectedRoute requiredRoles={['AREA_MANAGER']}><AreaManagerDashboard /></ProtectedRoute>} />
 
-          <Route path="/operational-manager" element={<DashboardLayout title="Operational Manager" role="Operational Manager" items={operationalManagerItems} basePath="/operational-manager" />}>
-            {renderDashboardRoutes(operationalManagerItems)}
-          </Route>
+            {/* Protected Accountant Dashboard */}
+            <Route path="/account-executive" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE', 'ACCOUNTANT']}><AccountantDashboard /></ProtectedRoute>} />
+            <Route path="/account-executive/*" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE', 'ACCOUNTANT']}><AccountantDashboard /></ProtectedRoute>} />
 
-          <Route path="/executive-officer" element={<DashboardLayout title="Executive Officer" role="Executive Officer" items={executiveOfficerItems} basePath="/executive-officer" />}>
-            {renderDashboardRoutes(executiveOfficerItems)}
-          </Route>
+            {/* Protected Operational Manager Dashboard */}
+            <Route path="/operational-manager" element={<ProtectedRoute requiredRoles={['OPERATION_MANAGER', 'OPERATIONAL_MANAGER']}><OperationalManagerDashboard /></ProtectedRoute>} />
+            <Route path="/operational-manager/*" element={<ProtectedRoute requiredRoles={['OPERATION_MANAGER', 'OPERATIONAL_MANAGER']}><OperationalManagerDashboard /></ProtectedRoute>} />
 
-          <Route path="/chairman" element={<DashboardLayout title="Chairman" role="Chairman" items={chairmanItems} basePath="/chairman" />}>
-            {renderDashboardRoutes(chairmanItems)}
-          </Route>
+            {/* Protected Executive Officer Dashboard */}
+            <Route path="/executive-officer/*" element={<ProtectedRoute requiredRoles={['EXECUTIVE_OFFICER']}><ExecutiveOfficerDashboard /></ProtectedRoute>} />
 
-          <Route path="/director" element={<DashboardLayout title="Director" role="Director" items={directorItems} basePath="/director" />}>
-            {renderDashboardRoutes(directorItems)}
-          </Route>
+            {/* Protected Chairman Dashboard */}
+            <Route path="/chairman" element={<ProtectedRoute requiredRoles={['CHAIRMAN']}><ChairmanDashboard /></ProtectedRoute>} />
+            <Route path="/chairman/*" element={<ProtectedRoute requiredRoles={['CHAIRMAN']}><ChairmanDashboard /></ProtectedRoute>} />
 
-          <Route path="/security-officer" element={<DashboardLayout title="Security Officer" role="Security Officer" items={securityOfficerItems} basePath="/security-officer" />}>
-            {renderDashboardRoutes(securityOfficerItems)}
-          </Route>
+            {/* Protected Director Dashboard */}
+            <Route path="/director" element={<ProtectedRoute requiredRoles={['DIRECTOR']}><DirectorDashboard /></ProtectedRoute>} />
+            <Route path="/director/*" element={<ProtectedRoute requiredRoles={['DIRECTOR']}><DirectorDashboard /></ProtectedRoute>} />
 
-          <Route path="/client" element={<DashboardLayout title="Client Portal" role="Client" items={clientItems} basePath="/client" />}>
-            {renderDashboardRoutes(clientItems)}
-          </Route>
+            {/* Protected Security Officer */}
+            <Route path="/security-officer" element={<ProtectedRoute requiredRoles={['SECURITY_OFFICER']}><ProfilePage /></ProtectedRoute>} />
+            <Route path="/security-officer/deductions" element={<ProtectedRoute requiredRoles={['SECURITY_OFFICER']}><DeductionSchedule /></ProtectedRoute>} />
+            <Route path="/security-officer/*" element={<ProtectedRoute requiredRoles={['SECURITY_OFFICER']}><ProfilePage /></ProtectedRoute>} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            <Route path="/client" element={<DashboardLayout title="Client Portal" role="Client" items={clientItems} basePath="/client" />}>
+              {renderDashboardRoutes(clientItems)}
+            </Route>
+
+            <Route path="/loan-approval" element={<LoanApproval />} />
+            <Route path="/loan-deductions" element={<LoanDeductions />} />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+        </ErrorBoundary>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

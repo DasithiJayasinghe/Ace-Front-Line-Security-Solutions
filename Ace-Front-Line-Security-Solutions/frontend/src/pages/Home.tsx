@@ -80,31 +80,31 @@ export default function Home() {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative flex min-h-[85vh] items-center overflow-hidden">
+      <section className="relative flex min-h-[85vh] items-center overflow-hidden dark:bg-gradient-to-b dark:from-background dark:to-background/80">
         <div className="absolute inset-0">
           <img src={heroBg} alt="Security team" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-transparent" />
+          <div className="absolute inset-0 dark:bg-gradient-to-r dark:from-background/95 dark:via-background/85 dark:to-background/70 light:bg-gradient-to-r light:from-white/90 light:via-white/80 light:to-transparent" />
         </div>
         <div className="container relative z-10 mx-auto px-4 py-20">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary">
             <Shield className="h-4 w-4" /> TRUSTED PROTECTION
           </div>
-          <h1 className="mt-6 max-w-2xl text-5xl font-extrabold leading-tight text-foreground md:text-7xl">
-            World Class{" "}
-            <span className="text-primary">Security Solutions</span>
+          <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-tight md:text-7xl">
+            <span className="block text-foreground">World Class</span>
+            <span className="block text-primary">Security Solutions</span>
           </h1>
-          <p className="mt-4 max-w-xl text-base text-muted-foreground">
+          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
             Led by elite ex-military professionals with over 9 years of experience,
-            providing comprehensive commercial, industrial and event security services.
+            providing comprehensive commercial, industrial and event security services across Sri Lanka.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link to="/inquiries">
-              <Button size="lg" className="bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-base px-8">
+              <Button size="lg" className="bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl text-base px-8">
                 Get a Quote
               </Button>
             </Link>
             <a href="#services">
-              <Button size="lg" variant="outline" className="border-primary/50 font-semibold text-primary hover:bg-primary/10 text-base px-8">
+              <Button size="lg" variant="outline" className="border-2 border-primary font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition-all text-base px-8">
                 View Services
               </Button>
             </a>
@@ -115,13 +115,13 @@ export default function Home() {
       {/* Stats */}
       <section className="relative -mt-12 z-20">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 gap-4 rounded-xl bg-card p-6 shadow-lg md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 rounded-2xl bg-gradient-to-br from-card to-card dark:from-card dark:to-card/80 p-8 shadow-2xl md:grid-cols-4 border border-border/50">
             {stats.map((s) => (
               <div key={s.label} className="text-center">
-                <div className={`text-3xl font-extrabold md:text-4xl ${s.gold ? "text-primary" : "text-foreground"}`}>
+                <div className={`text-3xl font-extrabold md:text-5xl ${s.gold ? "text-primary" : "text-foreground"}`}>
                   <AnimatedCounter target={s.value} />
                 </div>
-                <div className="mt-1 text-xs font-medium tracking-widest text-muted-foreground">{s.label}</div>
+                <div className="mt-2 text-xs font-medium tracking-widest text-muted-foreground uppercase">{s.label}</div>
               </div>
             ))}
           </div>
@@ -129,21 +129,22 @@ export default function Home() {
       </section>
 
       {/* Services */}
-      <section id="services" className="py-20">
+      <section id="services" className="py-24 dark:bg-gradient-to-b dark:from-background dark:to-background/95">
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
-            <span className="text-sm font-semibold uppercase tracking-widest text-primary">What We Offer</span>
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">Our Services</h2>
+            <span className="inline-block text-sm font-semibold uppercase tracking-widest text-primary px-4 py-2 rounded-full bg-primary/10">What We Offer</span>
+            <h2 className="mt-4 text-4xl font-bold md:text-5xl">Our Services</h2>
+            <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">Comprehensive security solutions tailored to your needs</p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {services.map((s) => (
-              <Card key={s.title} className="group transition-shadow hover:shadow-lg">
-                <CardContent className="p-6">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <s.icon className="h-6 w-6" />
+              <Card key={s.title} className="group overflow-hidden transition-all hover:shadow-2xl hover:border-primary/50 dark:bg-card/50 dark:hover:bg-card dark:border-border/30">
+                <CardContent className="p-8">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary transition-all group-hover:scale-110 group-hover:from-primary/40">
+                    <s.icon className="h-7 w-7" />
                   </div>
-                  <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
-                  <p className="text-sm text-muted-foreground">{s.desc}</p>
+                  <h3 className="mb-3 text-xl font-semibold text-foreground">{s.title}</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
                 </CardContent>
               </Card>
             ))}
@@ -152,27 +153,27 @@ export default function Home() {
       </section>
 
       {/* About */}
-      <section className="border-y border-border bg-secondary/30 py-20">
-        <div className="container mx-auto grid gap-12 px-4 md:grid-cols-2">
+      <section className="border-t border-border dark:bg-gradient-to-b dark:from-background/50 dark:to-background py-24">
+        <div className="container mx-auto grid gap-16 px-4 md:grid-cols-2 items-center">
           <div>
-            <span className="text-sm font-semibold uppercase tracking-widest text-primary">About Us</span>
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">Stallion Security</h2>
-            <p className="mt-4 text-muted-foreground">
-              Stallion Security is a premier security services provider founded by experienced
+            <span className="inline-block text-sm font-semibold uppercase tracking-widest text-primary px-4 py-2 rounded-full bg-primary/10">About Us</span>
+            <h2 className="mt-4 text-4xl font-bold md:text-5xl text-foreground">Ace Front-Line<br/>Security Solutions</h2>
+            <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+              Ace Front-Line Security Solutions is a premier security services provider founded by experienced
               ex-military professionals. We deliver comprehensive, reliable, and innovative
               security solutions tailored to meet the unique needs of our diverse clientele.
             </p>
-            <Accordion type="single" collapsible className="mt-6">
+            <Accordion type="single" collapsible className="mt-8">
               <AccordionItem value="vision">
-                <AccordionTrigger className="text-sm font-semibold">Our Vision</AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground">
+                <AccordionTrigger className="text-base font-semibold hover:text-primary transition-colors">Our Vision</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground text-base mt-2">
                   To be the most trusted and respected security services provider, setting the
                   industry standard for excellence, innovation, and integrity.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="mission">
-                <AccordionTrigger className="text-sm font-semibold">Our Mission</AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground">
+                <AccordionTrigger className="text-base font-semibold hover:text-primary transition-colors">Our Mission</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground text-base mt-2">
                   To protect our clients' people, property, and assets through highly trained
                   professionals, cutting-edge technology, and unwavering commitment to service excellence.
                 </AccordionContent>
@@ -180,12 +181,12 @@ export default function Home() {
             </Accordion>
           </div>
           <div className="flex items-center justify-center">
-            <div className="relative h-80 w-full overflow-hidden rounded-xl bg-muted">
-              <img src={heroBg} alt="About Stallion Security" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
-              <div className="absolute bottom-4 left-4 rounded-lg bg-primary px-4 py-2">
-                <span className="text-lg font-bold text-primary-foreground">9+ Years</span>
-                <span className="ml-1 text-sm text-primary-foreground/80">of Excellence</span>
+            <div className="relative h-80 w-full overflow-hidden rounded-2xl bg-muted shadow-2xl">
+              <img src={heroBg} alt="About Ace Security" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+              <div className="absolute bottom-6 left-6 rounded-xl bg-gradient-to-r from-primary to-primary/90 px-5 py-3 shadow-lg">
+                <span className="block text-2xl font-bold text-primary-foreground">9+</span>
+                <span className="text-sm font-semibold text-primary-foreground/90">Years of Excellence</span>
               </div>
             </div>
           </div>
@@ -193,22 +194,23 @@ export default function Home() {
       </section>
 
       {/* Team */}
-      <section className="py-20">
+      <section className="py-24 dark:bg-gradient-to-b dark:from-background dark:to-background/95">
         <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <span className="text-sm font-semibold uppercase tracking-widest text-primary">Leadership</span>
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">Our Team</h2>
+          <div className="mb-16 text-center">
+            <span className="inline-block text-sm font-semibold uppercase tracking-widest text-primary px-4 py-2 rounded-full bg-primary/10">Leadership</span>
+            <h2 className="mt-4 text-4xl font-bold md:text-5xl">Our Team</h2>
+            <p className="mt-3 text-lg text-muted-foreground">Experienced professionals committed to your security</p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {team.map((m) => (
-              <Card key={m.name} className="text-center transition-shadow hover:shadow-lg">
-                <CardContent className="p-6">
-                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <UserCheck className="h-8 w-8" />
+              <Card key={m.name} className="group overflow-hidden text-center transition-all hover:shadow-xl hover:border-primary/50 dark:bg-card/50 dark:hover:bg-card dark:border-border/30">
+                <CardContent className="p-8">
+                  <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary group-hover:scale-110 transition-transform">
+                    <UserCheck className="h-10 w-10" />
                   </div>
-                  <h3 className="font-semibold">{m.name}</h3>
-                  <p className="text-sm text-primary">{m.role}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{m.desc}</p>
+                  <h3 className="text-lg font-semibold text-foreground">{m.name}</h3>
+                  <p className="mt-2 text-primary font-medium">{m.role}</p>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{m.desc}</p>
                 </CardContent>
               </Card>
             ))}
@@ -217,25 +219,30 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="border-y border-border bg-secondary/30 py-20">
+      <section className="border-t border-border dark:bg-gradient-to-b dark:from-background/50 dark:to-background py-24">
         <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <span className="text-sm font-semibold uppercase tracking-widest text-primary">Testimonials</span>
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">What Our Clients Say</h2>
+          <div className="mb-16 text-center">
+            <span className="inline-block text-sm font-semibold uppercase tracking-widest text-primary px-4 py-2 rounded-full bg-primary/10">Testimonials</span>
+            <h2 className="mt-4 text-4xl font-bold md:text-5xl">What Our Clients Say</h2>
           </div>
-          <div className="mx-auto max-w-2xl text-center">
-            <Quote className="mx-auto mb-4 h-10 w-10 text-primary/30" />
-            <p className="text-lg italic text-muted-foreground">
-              "{testimonials[testimonialIdx].quote}"
-            </p>
-            <p className="mt-4 font-semibold">{testimonials[testimonialIdx].author}</p>
-            <p className="text-sm text-primary">{testimonials[testimonialIdx].company}</p>
-            <div className="mt-6 flex justify-center gap-2">
+          <div className="mx-auto max-w-3xl text-center">
+            <Card className="border-l-4 border-l-primary dark:bg-card/50 dark:border-border/30">
+              <CardContent className="p-10">
+                <Quote className="mx-auto mb-6 h-10 w-10 text-primary/30" />
+                <p className="text-xl italic leading-relaxed text-muted-foreground">
+                  "{testimonials[testimonialIdx].quote}"
+                </p>
+                <p className="mt-8 text-lg font-semibold text-foreground">{testimonials[testimonialIdx].author}</p>
+                <p className="text-primary font-medium">{testimonials[testimonialIdx].company}</p>
+              </CardContent>
+            </Card>
+            <div className="mt-8 flex justify-center gap-3">
               {testimonials.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setTestimonialIdx(i)}
-                  className={`h-2 w-2 rounded-full transition-colors ${i === testimonialIdx ? "bg-primary" : "bg-muted-foreground/30"}`}
+                  className={`h-3 w-3 rounded-full transition-all ${i === testimonialIdx ? "bg-primary w-8" : "bg-muted-foreground/40 hover:bg-muted-foreground/60"}`}
+                  aria-label={`Go to testimonial ${i + 1}`}
                 />
               ))}
             </div>
