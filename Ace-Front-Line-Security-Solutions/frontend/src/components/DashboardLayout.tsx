@@ -22,13 +22,13 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="w-64 bg-charcoal text-charcoal-foreground flex flex-col shrink-0">
-        <div className="p-6 border-b border-charcoal-foreground/10">
+      <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col shrink-0">
+        <div className="p-6 border-b border-black/10">
           <Link to="/" className="flex items-center gap-3">
             <Shield className="h-7 w-7 text-primary" />
             <div className="leading-none">
-              <p className="font-extrabold text-sm uppercase tracking-tight">Ace Front Line</p>
-              <p className="text-[9px] tracking-[0.2em] text-charcoal-foreground/50 uppercase mt-0.5">{role}</p>
+              <p className="font-black text-sm uppercase tracking-tight text-white">Ace Front Line</p>
+              <p className="text-[9px] tracking-[0.2em] text-white/60 uppercase mt-0.5 font-bold">{role}</p>
             </div>
           </Link>
         </div>
@@ -42,10 +42,10 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
                 key={item.path}
                 to={fullPath}
                 className={cn(
-                  "block px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+                  "block px-4 py-2.5 rounded-lg text-sm font-bold transition-all",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-charcoal-foreground/70 hover:bg-charcoal-foreground/5 hover:text-charcoal-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-black/20"
+                    : "text-sidebar-foreground hover:bg-white/5"
                 )}
               >
                 {item.label}
@@ -54,11 +54,11 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
           })}
         </nav>
 
-        <div className="p-4 border-t border-charcoal-foreground/10 space-y-2">
-          <Link to={`${basePath}/profile`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal-foreground/70 hover:bg-charcoal-foreground/5 hover:text-charcoal-foreground transition-all">
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <Link to={`${basePath}/profile`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-sidebar-foreground hover:bg-white/5 transition-all">
             <User className="h-4 w-4" /> Profile
           </Link>
-          <Link to="/" className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all">
+          <Link to="/" className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-destructive hover:bg-destructive/10 transition-all">
             <LogOut className="h-4 w-4" /> Logout
           </Link>
         </div>
@@ -70,13 +70,15 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
           <h1 className="text-lg font-bold text-foreground">{title}</h1>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">{role}</p>
-              <p className="text-[10px] text-muted-foreground">Logged in</p>
+              <p className="text-sm font-semibold text-foreground">
+                {localStorage.getItem("fullName") || role}
+              </p>
+              <p className="text-[10px] text-muted-foreground">Logged in as {role}</p>
             </div>
             <Link to={`${basePath}/profile`}>
               <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                  {role.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                  {(localStorage.getItem("fullName") || role).charAt(0)}
                 </AvatarFallback>
               </Avatar>
             </Link>

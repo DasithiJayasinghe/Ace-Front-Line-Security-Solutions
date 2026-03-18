@@ -1,3 +1,4 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,14 @@ import DashboardLayout from "./components/DashboardLayout";
 import PlaceholderPage from "./components/PlaceholderPage";
 import Careers from "./pages/Careers";
 import Inquiries from "./pages/Inquiries";
+import AdvanceRequests from "./pages/AdvanceRequests";
+import EditPayroll from "./pages/EditPayroll";
+import GeneratePayroll from "./pages/GeneratePayroll";
+import MyPayslips from "./pages/MyPayslips";
+import PayrollRecords from "./pages/PayrollRecords";
+import PayslipDetail from "./pages/PayslipDetail";
+import AccountantDashboard from "./pages/AccountantDashboard";
+import SalaryTrends from "./pages/SalaryTrends";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +76,7 @@ const executiveOfficerItems = [
   { label: "Uniform Distribution", path: "uniform-distribution" },
   { label: "Loan Request View", path: "loan-request-view" },
   { label: "Request a Leave", path: "request-leave" },
+  { label: "Advance Requests", path: "advance-requests" },
 ];
 
 const chairmanItems = [
@@ -96,13 +106,47 @@ const clientItems = [
   { label: "Payments", path: "payments" },
 ];
 
-function renderDashboardRoutes(items: { label: string; path: string }[]) {
+function renderDashboardRoutes(items: { label: string; path: string }[], role?: string) {
   return (
     <>
-      <Route index element={<PlaceholderPage title="Dashboard" />} />
-      {items.map((item) => (
-        <Route key={item.path} path={item.path} element={<PlaceholderPage title={item.label} />} />
-      ))}
+      <Route index element={role === "Accountant" ? <AccountantDashboard /> : <PlaceholderPage title="Dashboard" />} />
+      {items.map((item) => {
+        if (item.path === "dashboard" && role === "Accountant") {
+          return <Route key={item.path} path={item.path} element={<AccountantDashboard />} />;
+        }
+        if (item.path === "advance-requests") {
+          return <Route key={item.path} path={item.path} element={<AdvanceRequests role={role} />} />;
+        }
+        if (item.path === "generate-payroll") {
+          return <Route key={item.path} path={item.path} element={<GeneratePayroll />} />;
+        }
+        if (item.path === "paysheet-view") {
+          return <Route key={item.path} path={item.path} element={<MyPayslips mode="latest" />} />;
+        }
+        if (item.path === "payslip-view") {
+          return <Route key={item.path} path={item.path} element={<PayslipDetail />} />;
+        }
+        if (item.path === "payroll-records") {
+          return (
+            <React.Fragment key={item.path}>
+              <Route path={item.path} element={<PayrollRecords />} />
+              <Route path={`${item.path}/edit/:id`} element={<EditPayroll />} />
+            </React.Fragment>
+          );
+        }
+        if (item.path === "salary-history") {
+          return (
+            <React.Fragment key={item.path}>
+              <Route path={item.path} element={<MyPayslips mode="history" />} />
+            </React.Fragment>
+          );
+        }
+        if (item.path === "salary-trends") {
+          return <Route key={item.path} path={item.path} element={<SalaryTrends />} />;
+        }
+        return <Route key={item.path} path={item.path} element={<PlaceholderPage title={item.label} />} />;
+      })}
+      <Route path="payslip/:id" element={<PayslipDetail />} />
       <Route path="profile" element={<PlaceholderPage title="Profile" />} />
     </>
   );
@@ -123,35 +167,35 @@ const App = () => (
           <Route path="/inquiries" element={<Inquiries />} />
 
           <Route path="/area-manager" element={<DashboardLayout title="Area Manager" role="Area Manager" items={areaManagerItems} basePath="/area-manager" />}>
-            {renderDashboardRoutes(areaManagerItems)}
+            {renderDashboardRoutes(areaManagerItems, "Area Manager")}
           </Route>
 
           <Route path="/accountant" element={<DashboardLayout title="Accountant" role="Accountant" items={accountantItems} basePath="/accountant" />}>
-            {renderDashboardRoutes(accountantItems)}
+            {renderDashboardRoutes(accountantItems, "Accountant")}
           </Route>
 
           <Route path="/operational-manager" element={<DashboardLayout title="Operational Manager" role="Operational Manager" items={operationalManagerItems} basePath="/operational-manager" />}>
-            {renderDashboardRoutes(operationalManagerItems)}
+            {renderDashboardRoutes(operationalManagerItems, "Operational Manager")}
           </Route>
 
           <Route path="/executive-officer" element={<DashboardLayout title="Executive Officer" role="Executive Officer" items={executiveOfficerItems} basePath="/executive-officer" />}>
-            {renderDashboardRoutes(executiveOfficerItems)}
+            {renderDashboardRoutes(executiveOfficerItems, "Executive Officer")}
           </Route>
 
           <Route path="/chairman" element={<DashboardLayout title="Chairman" role="Chairman" items={chairmanItems} basePath="/chairman" />}>
-            {renderDashboardRoutes(chairmanItems)}
+            {renderDashboardRoutes(chairmanItems, "Chairman")}
           </Route>
 
           <Route path="/director" element={<DashboardLayout title="Director" role="Director" items={directorItems} basePath="/director" />}>
-            {renderDashboardRoutes(directorItems)}
+            {renderDashboardRoutes(directorItems, "Director")}
           </Route>
 
           <Route path="/security-officer" element={<DashboardLayout title="Security Officer" role="Security Officer" items={securityOfficerItems} basePath="/security-officer" />}>
-            {renderDashboardRoutes(securityOfficerItems)}
+            {renderDashboardRoutes(securityOfficerItems, "Security Officer")}
           </Route>
 
           <Route path="/client" element={<DashboardLayout title="Client Portal" role="Client" items={clientItems} basePath="/client" />}>
-            {renderDashboardRoutes(clientItems)}
+            {renderDashboardRoutes(clientItems, "Client")}
           </Route>
 
           <Route path="*" element={<NotFound />} />

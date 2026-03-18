@@ -39,6 +39,11 @@ const StaffLogin = () => {
 
       if (response.ok) {
         const data = await response.json();
+        // Store user info in localStorage for future use
+        localStorage.setItem("userId", data.userId);
+        localStorage.setItem("userRole", data.role);
+        localStorage.setItem("fullName", data.fullName);
+
         // Redirect based on the URL provided by the backend
         navigate(data.redirectUrl);
       } else {
