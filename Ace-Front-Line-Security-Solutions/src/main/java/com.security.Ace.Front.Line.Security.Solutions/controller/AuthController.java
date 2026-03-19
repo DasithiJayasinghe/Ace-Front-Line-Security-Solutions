@@ -69,7 +69,31 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Password changed successfully"));
     }
 
-    // ============ OPERATION MANAGER ============
+    // ============ FORGOT PASSWORD (PUBLIC) ============
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("If email exists, OTP has been sent"));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<OtpVerificationResponse>> verifyOtp(
+            @Valid @RequestBody OtpVerificationRequest request) {
+        OtpVerificationResponse response = authService.verifyOtpForReset(request.getEmail(), request.getOtp());
+        return ResponseEntity.ok(ApiResponse.success("OTP verified successfully", response));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getEmail(), request.getOtp(), 
+                request.getNewPassword(), request.getConfirmPassword());
+        return ResponseEntity.ok(ApiResponse.success("Password reset successfully. Please login with your new password"));
+    }
+
+    // ============ OPERATION_MANAGER ============
 
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('OPERATION_MANAGER')")
