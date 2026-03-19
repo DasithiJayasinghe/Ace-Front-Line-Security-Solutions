@@ -49,6 +49,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/refresh",
+                                "/api/auth/forgot-password",
+                                "/api/auth/verify-otp",
+                                "/api/auth/reset-password",
                                 "/uploads/**"
                         ).permitAll()
                         .anyRequest().authenticated()
