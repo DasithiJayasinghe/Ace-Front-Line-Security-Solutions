@@ -1,111 +1,109 @@
 package com.security.Ace.Front.Line.Security.Solutions.config;
 
+import com.security.Ace.Front.Line.Security.Solutions.security.JwtAuthFilter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Security configuration with JWT authentication
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-                return new BCryptPasswordEncoder();
-        }
+    private final JwtAuthFilter jwtAuthFilter;
+    private final UserDetailsService userDetailsService;
 
-        @Bean
-        public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-                return authConfig.getAuthenticationManager();
-        }
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
 
-        // define an in-memory user store with a few test accounts and roles
-        @Bean
-        public org.springframework.security.provisioning.InMemoryUserDetailsManager userDetailsService(
-                        PasswordEncoder encoder) {
-                var admin = org.springframework.security.core.userdetails.User
-                                .withUsername("admin")
-                                .password(encoder.encode("123"))
-                                .roles("ADMIN")
-                                .build();
-                var ops = org.springframework.security.core.userdetails.User
-                                .withUsername("ops_manager")
-                                .password(encoder.encode("ops123"))
-                                .roles("OPERATIONAL_MANAGER")
-                                .build();
-                var director = org.springframework.security.core.userdetails.User
-                                .withUsername("director")
-                                .password(encoder.encode("dir123"))
-                                .roles("DIRECTOR")
-                                .build();
-                var exec = org.springframework.security.core.userdetails.User
-                                .withUsername("exec")
-                                .password(encoder.encode("exec123"))
-                                .roles("EXECUTIVE")
-                                .build();
-                var accountant = org.springframework.security.core.userdetails.User
-                                .withUsername("accountant")
-                                .password(encoder.encode("acc123"))
-                                .roles("ACCOUNTANT")
-                                .build();
-                var areaManager = org.springframework.security.core.userdetails.User
-                                .withUsername("area_manager")
-                                .password(encoder.encode("area123"))
-                                .roles("AREA_MANAGER")
-                                .build();
-                var chairman = org.springframework.security.core.userdetails.User
-                                .withUsername("chairman")
-                                .password(encoder.encode("chair123"))
-                                .roles("CHAIRMAN")
-                                .build();
-                return new org.springframework.security.provisioning.InMemoryUserDetailsManager(admin, ops, director,
-                                exec, accountant, areaManager, chairman);
-        }
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
+                        // Auth endpoints
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/forgot-password",
+                                "/api/auth/verify-otp",
+                                "/api/auth/reset-password",
+                                "/uploads/**"
+                        ).permitAll()
+                        // Public endpoints for job applications and careers
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/applications/apply").permitAll()
+                        // Public inquiry submission endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/inquiries/service").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/inquiries/general").permitAll()
+                        // Public CV submission endpoint
+                        .requestMatchers(HttpMethod.POST, "/api/cv-submissions/submit").permitAll()
+                        // All other requests require authentication
+                        .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                http
-                                .csrf(csrf -> csrf.disable())
-                                .authorizeHttpRequests(authorize -> authorize
-                                                // Auth endpoint must be public
-                                                .requestMatchers("/api/auth/**").permitAll()
-                                                // Public endpoints for job applications
-                                                .requestMatchers("/api/public/**").permitAll()
-                                                .requestMatchers("/api/applications/apply").permitAll()
+        return http.build();
+    }
 
-                                                // Public inquiry submission endpoints
-                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
-                                                                "/api/inquiries/service")
-                                                .permitAll()
-                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
-                                                                "/api/inquiries/general")
-                                                .permitAll()
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
 
-                                                // Public CV submission endpoint
-                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
-                                                                "/api/cv-submissions/submit")
-                                                .permitAll()
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
 
-                                                // Protected endpoints for admin/operational manager
-                                                .requestMatchers("/api/vacancies/**").authenticated()
-                                                .requestMatchers("/api/applications/**").authenticated()
-                                                .requestMatchers("/api/interviews/**").authenticated()
-                                                .requestMatchers("/api/inquiries/**").authenticated()
-                                                .requestMatchers("/api/cv-submissions/**").authenticated()
-                                                .requestMatchers("/api/announcements/**").authenticated()
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-                                                // All other requests require authentication
-                                                .anyRequest().authenticated())
-                                .httpBasic(basic -> {
-                                });
-
-                return http.build();
-        }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }

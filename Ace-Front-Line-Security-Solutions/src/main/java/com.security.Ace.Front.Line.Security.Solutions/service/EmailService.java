@@ -1,29 +1,90 @@
 package com.security.Ace.Front.Line.Security.Solutions.service;
 
 import com.security.Ace.Front.Line.Security.Solutions.util.EmailSendingException;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${app.mail.enabled:true}")
+    private boolean mailEnabled;
+
+    @Value("${spring.mail.username:}")
     private String fromEmail;
+
+    private boolean isMailDisabled() {
+        return !mailEnabled || fromEmail == null || fromEmail.contains("your_email");
+    }
+
+    @Async
+    public void sendOtpEmail(String toEmail, String otp, String fullName) {
+        if (isMailDisabled()) {
+            log.debug("Mail disabled; skipping OTP email to {}", toEmail);
+            return;
+        }
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("ACE Front Line Security - OTP for Password Change");
+            message.setText(
+                    "Dear " + fullName + ",\n\n" +
+                            "Your OTP for password change is: " + otp + "\n\n" +
+                            "This OTP is valid for 10 minutes.\n\n" +
+                            "If you did not request this, please contact your administrator immediately.\n\n" +
+                            "Regards,\nACE Front Line Security Solutions"
+            );
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.warn("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendWelcomeEmail(String toEmail, String fullName, String username) {
+        if (isMailDisabled()) {
+            log.debug("Mail disabled; skipping welcome email to {}", toEmail);
+            return;
+        }
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("Welcome to ACE Front Line Security Solutions");
+            message.setText(
+                    "Dear " + fullName + ",\n\n" +
+                            "Welcome to ACE Front Line Security Solutions!\n\n" +
+                            "Your account has been created.\n" +
+                            "Username: " + username + "\n\n" +
+                            "Please login and change your password on first login.\n\n" +
+                            "Regards,\nACE Front Line Security Solutions"
+            );
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.warn("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
+        }
+    }
 
     /**
      * Send interview invitation email to candidate
      */
     public void sendInterviewInvitationEmail(String toEmail, String applicantName, String jobTitle,
                                              String interviewDate, String interviewTime, String interviewLocation) {
+        if (isMailDisabled()) {
+            log.debug("Mail disabled; skipping interview invitation email to {}", toEmail);
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -41,9 +102,6 @@ public class EmailService {
         }
     }
 
-    /**
-     * Build HTML template for interview invitation email
-     */
     private String buildInterviewEmailTemplate(String applicantName, String jobTitle,
                                                String interviewDate, String interviewTime, String interviewLocation) {
         return "<!DOCTYPE html>" +
@@ -85,10 +143,11 @@ public class EmailService {
                 "</html>";
     }
 
-    /**
-     * Send simple text email
-     */
     public void sendSimpleEmail(String toEmail, String subject, String text) {
+        if (isMailDisabled()) {
+            log.debug("Mail disabled; skipping simple email to {}", toEmail);
+            return;
+        }
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
@@ -102,10 +161,11 @@ public class EmailService {
         }
     }
 
-    /**
-     * Send inquiry reply email
-     */
     public void sendInquiryReplyEmail(String toEmail, String inquirerName, String originalSubject, String replyBody) {
+        if (isMailDisabled()) {
+            log.debug("Mail disabled; skipping inquiry reply email to {}", toEmail);
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -153,10 +213,11 @@ public class EmailService {
         }
     }
 
-    /**
-     * Send rejection email to candidate
-     */
     public void sendRejectionEmail(String toEmail, String applicantName, String jobTitle) {
+        if (isMailDisabled()) {
+            log.debug("Mail disabled; skipping rejection email to {}", toEmail);
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -202,10 +263,11 @@ public class EmailService {
         }
     }
 
-    /**
-     * Send selection email to candidate
-     */
     public void sendSelectionEmail(String toEmail, String applicantName, String jobTitle, String reportDate) {
+        if (isMailDisabled()) {
+            log.debug("Mail disabled; skipping selection email to {}", toEmail);
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");

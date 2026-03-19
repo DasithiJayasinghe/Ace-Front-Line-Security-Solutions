@@ -1,50 +1,18 @@
 package com.security.Ace.Front.Line.Security.Solutions.dto;
 
+import com.security.Ace.Front.Line.Security.Solutions.enums.Role;
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
 public class LoginResponse {
-    private boolean success;
-    private String message;
+    private String token;
+    private String refreshToken;
+    private Long userId;
     private String username;
-    private String role;
-
-    public LoginResponse() {
-    }
-
-    public LoginResponse(boolean success, String message, String username, String role) {
-        this.success = success;
-        this.message = message;
-        this.username = username;
-        this.role = role;
-    }
-
-    public boolean isSuccess() {
-        return success;
-    }
-
-    public void setSuccess(boolean success) {
-        this.success = success;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
+    private String fullName;
+    private Role role;
+    private boolean firstLogin;
+    private String message;
 }
