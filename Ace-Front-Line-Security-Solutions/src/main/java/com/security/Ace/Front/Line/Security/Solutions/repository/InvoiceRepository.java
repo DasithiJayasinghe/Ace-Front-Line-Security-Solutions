@@ -1,15 +1,17 @@
 package com.security.Ace.Front.Line.Security.Solutions.repository;
 
-import com.security.Ace.Front.Line.Security.Solutions.entity.Invoice;
-import com.security.Ace.Front.Line.Security.Solutions.entity.InvoiceStatus;
-import com.security.Ace.Front.Line.Security.Solutions.entity.InvoiceType;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.security.Ace.Front.Line.Security.Solutions.entity.Invoice;
+import com.security.Ace.Front.Line.Security.Solutions.entity.InvoiceStatus;
+import com.security.Ace.Front.Line.Security.Solutions.entity.InvoiceType;
 
 @Repository
 public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
@@ -58,6 +60,16 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
     // Invoices that are ISSUED and due today (for reminders)
     @Query(value = "SELECT * FROM invoices WHERE status = 'ISSUED' AND due_date = CURDATE()", nativeQuery = true)
     List<Invoice> findInvoicesDueToday();
+
+                // Invoices eligible for proactive payment reminders
+                @Query("""
+                                                SELECT i FROM Invoice i
+                                                WHERE i.status IN ('ISSUED', 'PAYMENT_REJECTED')
+                                                        AND i.balanceAmount > 0
+                                                        AND i.dueDate BETWEEN :fromDate AND :toDate
+                                                """)
+                List<Invoice> findInvoicesForReminderWindow(@Param("fromDate") LocalDate fromDate,
+                                                                                                                                                                                                @Param("toDate") LocalDate toDate);
 
     // Invoices past grace period (20th) — for automatic late fee application
     @Query(value = "SELECT * FROM invoices WHERE status IN ('ISSUED','PAYMENT_UPLOADED','PAYMENT_REJECTED') " +

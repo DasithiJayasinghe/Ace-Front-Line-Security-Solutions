@@ -1,15 +1,16 @@
 package com.security.Ace.Front.Line.Security.Solutions.repository;
 
-import com.security.Ace.Front.Line.Security.Solutions.entity.EmailLog;
-import com.security.Ace.Front.Line.Security.Solutions.entity.EmailStatus;
-import com.security.Ace.Front.Line.Security.Solutions.entity.EmailType;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.security.Ace.Front.Line.Security.Solutions.entity.EmailLog;
+import com.security.Ace.Front.Line.Security.Solutions.entity.EmailStatus;
+import com.security.Ace.Front.Line.Security.Solutions.entity.EmailType;
 
 @Repository
 public interface EmailLogRepository extends JpaRepository<EmailLog, Integer> {
@@ -33,4 +34,17 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Integer> {
 
     @Query("SELECT COUNT(e) FROM EmailLog e WHERE DATE(e.sentAt) = CURRENT_DATE AND e.status = 'SENT'")
     long countEmailsSentToday();
+
+        @Query("""
+                        SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+                        FROM EmailLog e
+                        WHERE e.emailType = :emailType
+                            AND e.relatedId = :relatedId
+                            AND e.status = 'SENT'
+                            AND e.sentAt BETWEEN :startDateTime AND :endDateTime
+                        """)
+        boolean existsSentEmailForDay(@Param("emailType") EmailType emailType,
+                                                                    @Param("relatedId") Integer relatedId,
+                                                                    @Param("startDateTime") LocalDateTime startDateTime,
+                                                                    @Param("endDateTime") LocalDateTime endDateTime);
 }

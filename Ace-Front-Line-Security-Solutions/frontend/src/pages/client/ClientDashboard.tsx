@@ -52,13 +52,21 @@ const ClientDashboard = () => {
                         (b.billingYear ?? 0) - (a.billingYear ?? 0) || (b.billingMonth ?? 0) - (a.billingMonth ?? 0)
                     );
                     setRecentInvoices(sorted.slice(0, 5));
-                } catch (e: any) {
-                    setInvoicesErr(e?.message ?? "Failed to load invoices");
+                } catch (e: unknown) {
+                    if (e instanceof Error) {
+                        setInvoicesErr(e.message);
+                    } else {
+                        setInvoicesErr("Failed to load invoices");
+                    }
                 } finally {
                     setInvoicesLoading(false);
                 }
-            } catch (e: any) {
-                setErr(e?.message ?? "Failed to load dashboard");
+            } catch (e: unknown) {
+                if (e instanceof Error) {
+                    setErr(e.message);
+                } else {
+                    setErr("Failed to load dashboard");
+                }
             } finally {
                 setLoading(false);
             }

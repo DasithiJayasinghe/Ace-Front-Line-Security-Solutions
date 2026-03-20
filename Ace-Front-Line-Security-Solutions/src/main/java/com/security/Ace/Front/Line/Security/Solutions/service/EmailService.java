@@ -3,6 +3,9 @@ package com.security.Ace.Front.Line.Security.Solutions.service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -31,7 +34,13 @@ public class EmailService {
 
     private static final String FROM_EMAIL = "acefrontlines@gmail.com";
     private static final String FROM_NAME  = "Ace Front Line Security";
-    private static final String PORTAL_URL = "http://localhost:8082";
+        private static final String LOGO_CID = "afls-logo";
+
+        @Value("${app.portal.url:http://localhost:8082}")
+        private String portalUrl;
+
+        @Value("${app.brand.logo-path:/home/shishi/Documents/Ace-Front-Line-Security-Solutions/Ace-Front-Line-Security-Solutions/frontend/dist/assets/logo-Bdhrs9VM.png}")
+        private String brandLogoPath;
 
     // ── Welcome / Credentials ────────────────────────���────────────────────────
 
@@ -39,17 +48,18 @@ public class EmailService {
     public void sendCredentialsEmail(Client client, String password) {
         String subject = "Your Ace Front Line Security Portal — Login Credentials";
         String body = buildHeader()
-                + sectionTitle("Welcome, " + esc(client.getContactPersonName()) + "!")
-                + para("Your client account has been created on the <strong>Ace Front Line Security Management Portal</strong>. "
-                + "Use the credentials below to access your account.")
+                + sectionTitle("Welcome to Ace Front Line Security Solutions")
+                + para("Hello <strong>" + esc(client.getContactPersonName()) + "</strong>,")
+                + para("Your client account has been successfully provisioned. You now have secure access to real-time reporting, "
+                + "scheduling, and security management tools.")
                 + card(
-                        row("Company",            esc(client.getCompanyName()))
-                        + row("Username",           code(esc(client.getUsername())))
+                        row("Company", esc(client.getCompanyName()))
+                        + row("Username", code(esc(client.getUsername())))
                         + row("Temporary Password", code(esc(password)))
                 )
-                + warn("You will be required to change your password on first login. "
-                + "Please keep your credentials secure and do not share them with anyone.")
-                + cta("Login to Portal", PORTAL_URL + "/client-login")
+                + warn("Please log in and change your password immediately for security. "
+                + "Temporary credentials expire within 24 hours.")
+                + cta("Login to Client Portal", portalUrl + "/client-login")
                 + buildFooter();
 
         sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
@@ -86,7 +96,7 @@ public class EmailService {
                 + "Cheque payable to: <strong>Ace Front Line Security Solutions (PVT) Ltd</strong><br>"
                 + "Reference: <strong>" + esc(invoice.getInvoiceNumber()) + "</strong>"
                 + "</p></td></tr></table>"
-                + cta("View Invoice &amp; Upload Payment Proof", PORTAL_URL + "/client/payments")
+                + cta("View Invoice &amp; Upload Payment Proof", portalUrl + "/client/payments")
                 + buildFooter();
 
         sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
@@ -124,7 +134,7 @@ public class EmailService {
                 )
                 + para("Pay via bank transfer: <strong>Bank of Ceylon</strong>, A/C: <strong>79289055</strong>, Lake View Branch (612)<br>"
                 + "Reference: <strong>" + esc(invoice.getInvoiceNumber()) + "</strong>")
-                + cta("Upload Payment Proof", PORTAL_URL + "/client/payments")
+                + cta("Upload Payment Proof", portalUrl + "/client/payments")
                 + buildFooter();
 
         sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
@@ -155,7 +165,7 @@ public class EmailService {
                 + para("If you believe this is in error or wish to discuss a payment plan, "
                 + "please contact us immediately at <strong>0114848177</strong> or "
                 + "<a href='mailto:" + FROM_EMAIL + "' style='color:#EAB308;'>" + FROM_EMAIL + "</a>.")
-                + cta("Pay Now", PORTAL_URL + "/client/payments")
+                + cta("Pay Now", portalUrl + "/client/payments")
                 + buildFooter();
 
         sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
@@ -187,7 +197,7 @@ public class EmailService {
                         + row("Verified On",  payment.getVerifiedAt() != null
                                 ? payment.getVerifiedAt().toLocalDate().toString() : "\u2014")
                 )
-                + cta("View Payment History", PORTAL_URL + "/client/payments")
+                + cta("View Payment History", portalUrl + "/client/payments")
                 + buildFooter();
 
         sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
@@ -221,7 +231,7 @@ public class EmailService {
                 + "</ol>"
                 + para("If you need assistance, please contact us at "
                 + "<a href='mailto:" + FROM_EMAIL + "' style='color:#EAB308;'>" + FROM_EMAIL + "</a> or call <strong>0114848177</strong>.")
-                + cta("Re-upload Payment Proof", PORTAL_URL + "/client/payments")
+                + cta("Re-upload Payment Proof", portalUrl + "/client/payments")
                 + buildFooter();
 
         sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
@@ -243,7 +253,7 @@ public class EmailService {
                 + para("Dear <strong>" + esc(client.getContactPersonName())
                 + "</strong>, thank you for taking the time to share your experience with us.")
                 + para("Your testimonial is now <strong>live on our homepage</strong>. We truly value your feedback — it helps us continuously improve our services and motivates our team.")
-                + cta("View Our Homepage", PORTAL_URL)
+                + cta("View Our Homepage", portalUrl)
                 + buildFooter();
 
         sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
@@ -331,48 +341,46 @@ public class EmailService {
     // ═════════════════════════════════════════════════════════════════════════
 
     private String buildHeader() {
+        String logoHtml = hasBrandLogo()
+                ? "<img src='cid:" + LOGO_CID + "' alt='Ace Front Line Security Solutions' "
+                                + "style='display:block;width:42px;height:42px;border-radius:50%;object-fit:cover;'>"
+                                : "<div style='width:42px;height:42px;border-radius:50%;background:#EAB308;color:#000;"
+                                + "font-family:Arial,sans-serif;font-weight:900;font-size:20px;line-height:42px;text-align:center;'>A</div>";
+
         return "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
                 + "<meta name='viewport' content='width=device-width,initial-scale=1'></head>"
-                + "<body style='margin:0;padding:0;background-color:#f3f4f6;'>"
-                + "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='background:#f3f4f6;padding:20px 0;'>"
+                + "<body style='margin:0;padding:0;background-color:#ededed;'>"
+                + "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='background:#ededed;padding:20px 8px;'>"
                 + "<tr><td align='center'>"
-                + "<table role='presentation' width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;'>"
-                // ── Compact brand header ──
-                + "<tr><td style='background:#111827;border-radius:10px 10px 0 0;padding:14px 24px;'>"
+                + "<table role='presentation' width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;box-shadow:0 8px 24px rgba(0,0,0,.18);'>"
+                + "<tr><td style='background:#000000;border-radius:0;padding:16px 22px 14px;'>"
                 + "<table role='presentation' width='100%' cellpadding='0' cellspacing='0'><tr>"
-                + "<td style='vertical-align:middle;'>"
-                + "<table cellpadding='0' cellspacing='0'><tr>"
-                + "<td style='width:30px;height:30px;background:#EAB308;border-radius:6px;text-align:center;vertical-align:middle;'>"
-                + "<span style='font-family:Arial;font-size:14px;font-weight:900;color:#000;line-height:30px;display:block;'>A</span></td>"
-                + "<td style='padding-left:10px;vertical-align:middle;'>"
-                + "<span style='font-family:Arial;font-size:14px;font-weight:900;color:#ffffff;letter-spacing:1px;'>ACE FRONT LINE</span><br>"
-                + "<span style='font-family:Arial;font-size:9px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;'>Security Solutions (PVT) Ltd</span>"
-                + "</td></tr></table></td>"
-                + "<td align='right' style='vertical-align:middle;'>"
-                + "<span style='font-family:Arial;font-size:9px;color:#6b7280;'>acefrontlines@gmail.com</span>"
+                + "<td style='width:52px;vertical-align:middle;'>" + logoHtml + "</td>"
+                + "<td style='font-family:Arial,sans-serif;color:#EAB308;font-weight:900;font-size:29px;letter-spacing:1px;text-transform:uppercase;vertical-align:middle;padding-left:10px;'>"
+                + "Ace Front Line Security Solutions"
                 + "</td>"
                 + "</tr></table>"
                 + "</td></tr>"
-                // ── Yellow accent bar ──
-                + "<tr><td style='background:#EAB308;height:3px;font-size:0;line-height:0;'>&nbsp;</td></tr>"
-                // ── White content area begins ──
-                + "<tr><td style='background:#ffffff;padding:28px 32px 20px;font-family:Arial,sans-serif;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;'>";
+                + "<tr><td style='background:#EAB308;height:2px;font-size:0;line-height:0;'>&nbsp;</td></tr>"
+                + "<tr><td style='background:#f6f6f6;padding:30px 30px 22px;font-family:Arial,sans-serif;border-left:1px solid #dedede;border-right:1px solid #dedede;'>";
     }
 
     private String buildFooter() {
         return "</td></tr>"
-                // ── Footer strip ──
-                + "<tr><td style='background:#1a1a1a;border-radius:0 0 10px 10px;padding:14px 24px;font-family:Arial,sans-serif;'>"
+                + "<tr><td style='background:#f0f0f0;border-left:1px solid #dedede;border-right:1px solid #dedede;padding:14px 24px;font-family:Arial,sans-serif;color:#6b7280;font-size:11px;text-align:center;'>"
+                + "Need technical assistance? 24/7 Operations Center is standing by."
+                + "</td></tr>"
+                + "<tr><td style='background:#f7f7f7;border-left:1px solid #dedede;border-right:1px solid #dedede;border-bottom:1px solid #dedede;border-radius:0 0 8px 8px;padding:18px 24px;font-family:Arial,sans-serif;'>"
                 + "<table role='presentation' width='100%' cellpadding='0' cellspacing='0'>"
                 + "<tr>"
-                + "<td style='color:#6b7280;font-size:11px;line-height:1.6;'>"
-                + "<strong style='color:#EAB308;'>Ace Front Line Security Solutions (PVT) Ltd</strong><br>"
-                + "189/2 Sandatenna Mawatha, Battaramulla &nbsp;|&nbsp; Tel: 0114848177<br>"
-                + "VAT: 101127788-7000 &nbsp;|&nbsp; acefrontlines@gmail.com"
+                + "<td style='color:#4b5563;font-size:11px;line-height:1.7;'>"
+                + "<strong style='color:#111827;'>ACE FRONT LINE SECURITY SOLUTIONS</strong><br>"
+                + "123 Security Plaza, London, EC1A 1BE<br>"
+                + "VAT: 101127788-7000 &nbsp;|&nbsp; Reg: 09876543"
                 + "</td>"
                 + "<td align='right' style='color:#6b7280;font-size:11px;vertical-align:top;'>"
-                + "<span style='display:block;color:#9ca3af;'>This is an automated email.</span>"
-                + "<span style='display:block;color:#9ca3af;'>Please do not reply directly.</span>"
+                + "<span style='display:block;color:#6b7280;'>Contact: " + FROM_EMAIL + "</span>"
+                + "<span style='display:block;color:#6b7280;'>Tel: 0114848177</span>"
                 + "</td></tr></table>"
                 + "</td></tr>"
                 + "</table></td></tr></table></body></html>";
@@ -480,6 +488,11 @@ public class EmailService {
                 .replace("'", "&#x27;");
     }
 
+        private boolean hasBrandLogo() {
+                return brandLogoPath != null && !brandLogoPath.isBlank()
+                                && new FileSystemResource(brandLogoPath).exists();
+        }
+
     // ═════════════════════════════════════════════════════════════════════════
     // PRIVATE — SEND + LOG
     // ═════════════════════════════════════════════════════════════════════════
@@ -516,14 +529,16 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true); // true = HTML
 
+                        if (hasBrandLogo()) {
+                                helper.addInline(LOGO_CID, new FileSystemResource(brandLogoPath));
+                        }
+
             mailSender.send(message);
-            log.info("✅ Email sent [{}] → {}", subject, toEmail);
+                        String recipientLabel = (toName != null && !toName.isBlank()) ? toName + " <" + toEmail + ">" : toEmail;
+                        log.info("✅ Email sent [{}] → {}", subject, recipientLabel);
             return true;
 
-        } catch (MessagingException e) {
-            log.error("❌ MessagingException sending to {}: {}", toEmail, e.getMessage());
-            return false;
-        } catch (Exception e) {
+                } catch (MessagingException | MailException | java.io.UnsupportedEncodingException e) {
             log.error("❌ Unexpected error sending email to {}: {}", toEmail, e.getMessage());
             return false;
         }
@@ -538,20 +553,20 @@ public class EmailService {
                               EmailType type, Integer relatedId,
                               boolean sent, String errorMessage) {
         try {
-            EmailLog log = new EmailLog();
-            log.setRecipientEmail(recipientEmail);
-            log.setRecipientName(recipientName);
-            log.setSubject(subject);
-            log.setBody(body);
-            log.setEmailType(type);
-            log.setRelatedId(relatedId);
-            log.setStatus(sent ? EmailStatus.SENT : EmailStatus.FAILED);
-            log.setSentAt(LocalDateTime.now());
-            log.setErrorMessage(errorMessage);
-            emailLogRepository.save(log);
+                        EmailLog emailLog = new EmailLog();
+                        emailLog.setRecipientEmail(recipientEmail);
+                        emailLog.setRecipientName(recipientName);
+                        emailLog.setSubject(subject);
+                        emailLog.setBody(body);
+                        emailLog.setEmailType(type);
+                        emailLog.setRelatedId(relatedId);
+                        emailLog.setStatus(sent ? EmailStatus.SENT : EmailStatus.FAILED);
+                        emailLog.setSentAt(LocalDateTime.now());
+                        emailLog.setErrorMessage(errorMessage);
+                        emailLogRepository.save(emailLog);
         } catch (Exception e) {
             // Log to console only — never let audit logging break email flow
-            this.log.error("⚠ Failed to save email log for {}: {}", recipientEmail, e.getMessage());
+                        log.error("⚠ Failed to save email log for {}: {}", recipientEmail, e.getMessage());
         }
     }
 }

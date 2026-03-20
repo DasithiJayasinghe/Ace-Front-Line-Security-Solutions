@@ -1,10 +1,12 @@
 package com.security.Ace.Front.Line.Security.Solutions.service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.itextpdf.text.BaseColor;
@@ -13,6 +15,7 @@ import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Element;
 import com.itextpdf.text.Font;
+import com.itextpdf.text.Image;
 import com.itextpdf.text.PageSize;
 import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.Phrase;
@@ -46,6 +49,9 @@ public class PdfService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final PaymentRepository paymentRepository;
     private final BankDetailsRepository bankDetailsRepository;
+
+    @Value("${app.brand.logo-path:/home/shishi/Documents/Ace-Front-Line-Security-Solutions/Ace-Front-Line-Security-Solutions/frontend/dist/assets/logo-Bdhrs9VM.png}")
+    private String brandLogoPath;
 
     // ── Brand colours ─────────────────────────────────────────────────────────
     private static final BaseColor BRAND_YELLOW = new BaseColor(234, 179,   8);
@@ -130,22 +136,33 @@ public class PdfService {
         leftCell.setPadding(16);
         leftCell.setVerticalAlignment(Element.ALIGN_TOP);
 
-        // Logo row: small yellow "A" box + company name
+        // Logo row: brand logo + company name
         PdfPTable logoRow = new PdfPTable(new float[]{0.15f, 0.85f});
         logoRow.setWidthPercentage(100);
         logoRow.setSpacingAfter(8);
 
-        PdfPCell logoBadge = new PdfPCell(new Phrase("A",
+        Image logoImage = loadBrandLogo();
+        if (logoImage != null) {
+            logoImage.scaleToFit(30f, 30f);
+            PdfPCell logoCell = new PdfPCell(logoImage, false);
+            logoCell.setBorder(Rectangle.NO_BORDER);
+            logoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            logoCell.setPadding(0);
+            logoRow.addCell(logoCell);
+        } else {
+            PdfPCell logoBadge = new PdfPCell(new Phrase("A",
                 new Font(Font.FontFamily.HELVETICA, 9, Font.BOLD, BaseColor.BLACK)));
-        logoBadge.setBackgroundColor(BRAND_YELLOW);
-        logoBadge.setBorder(Rectangle.NO_BORDER);
-        logoBadge.setHorizontalAlignment(Element.ALIGN_CENTER);
-        logoBadge.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        logoBadge.setPaddingTop(5);
-        logoBadge.setPaddingBottom(5);
-        logoBadge.setPaddingLeft(4);
-        logoBadge.setPaddingRight(4);
-        logoRow.addCell(logoBadge);
+            logoBadge.setBackgroundColor(BRAND_YELLOW);
+            logoBadge.setBorder(Rectangle.NO_BORDER);
+            logoBadge.setHorizontalAlignment(Element.ALIGN_CENTER);
+            logoBadge.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            logoBadge.setPaddingTop(5);
+            logoBadge.setPaddingBottom(5);
+            logoBadge.setPaddingLeft(4);
+            logoBadge.setPaddingRight(4);
+            logoRow.addCell(logoBadge);
+        }
 
         PdfPCell nameCell = new PdfPCell();
         nameCell.setBorder(Rectangle.NO_BORDER);
@@ -217,6 +234,22 @@ public class PdfService {
         sepCell.setFixedHeight(3f);
         sep.addCell(sepCell);
         doc.add(sep);
+    }
+
+    private Image loadBrandLogo() {
+        try {
+            if (brandLogoPath == null || brandLogoPath.isBlank()) {
+                return null;
+            }
+            File logoFile = new File(brandLogoPath);
+            if (!logoFile.exists()) {
+                return null;
+            }
+            return Image.getInstance(logoFile.getAbsolutePath());
+        } catch (Exception ex) {
+            log.warn("Could not load brand logo for PDF header: {}", ex.getMessage());
+            return null;
+        }
     }
 
     // ── 2. Client info block ──────────────────────────────────────────────────
