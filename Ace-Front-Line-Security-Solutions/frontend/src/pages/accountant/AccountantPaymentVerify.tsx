@@ -151,7 +151,7 @@ const AccountantPaymentVerify = () => {
                         <ArrowLeft className="h-4 w-4 text-gray-600" />
                     </button>
                     <div>
-                        <h1 className="text-xl font-black text-gray-900">
+                        <h1 className="text-2xl font-black text-gray-900">
                             Verify Payment #{payment.paymentId}
                         </h1>
                         <p className="text-sm text-gray-500 mt-0.5">

@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { Shield, Video, Truck, CheckCircle, Star, Phone, Mail, MapPin, ChevronRight, Menu, X, Lock, Users, Eye, Crosshair, UserCheck, Flame, Facebook, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { feedbackApi } from "@/lib/api";
 import heroImage from "@/assets/hero-security.jpg";
 import eagleImage from "@/assets/eagle-vision.jpg";
 import logoImage from "@/assets/logo.png";
@@ -50,14 +51,7 @@ const clients = [
   "JF & I Packaging (Pvt) Ltd",
 ];
 
-const testimonials = [
-  { name: "Hirdaramani Group", role: "Apparel Industry Client", quote: "Ace Front Line provides exceptional security services across our multiple factory locations. Their ex-military personnel bring unmatched professionalism and discipline." },
-  { name: "Brandix Intimates", role: "Manufacturing Client", quote: "The reliability and training standards of Ace Front Line's security officers have significantly improved our facility security. Their 24/7 commitment is outstanding." },
-  { name: "CEAT Kelani", role: "Industrial Client", quote: "Their comprehensive approach to security, combining manned guarding with electronic surveillance, gives us complete peace of mind for our operations." },
-  { name: "Ceylon Biscuits Limited", role: "FMCG Client", quote: "Ace Front Line has been instrumental in maintaining the security standards at our facilities. Their officers are well-trained, punctual, and always professional." },
-  { name: "Colombo City Centre", role: "Real Estate Client", quote: "The security team provided by Ace Front Line for our residential complex is exemplary. Residents feel safe and well-protected around the clock." },
-  { name: "Buddhist Ladies College", role: "Education Client", quote: "We trust Ace Front Line with the safety of our students and staff. Their guards are courteous, vigilant, and highly dependable." },
-];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const TESTIMONIALS_PER_PAGE = 3;
 
@@ -65,6 +59,39 @@ const Index = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedService, setExpandedService] = useState<number | null>(null);
   const [testimonialPage, setTestimonialPage] = useState(0);
+  const [liveTestimonials, setLiveTestimonials] = useState<any[]>([]);
+  const [testimonialsLoaded, setTestimonialsLoaded] = useState(false);
+
+  useEffect(() => {
+    feedbackApi.getHomepage()
+      .then(data => {
+        setLiveTestimonials(data ?? []);
+        setTestimonialsLoaded(true);
+      })
+      .catch(() => {
+        setLiveTestimonials([]);
+        setTestimonialsLoaded(true);
+      });
+  }, []);
+
+  // Use live data if available, fall back to static
+  const testimonials = testimonialsLoaded && liveTestimonials.length > 0
+    ? liveTestimonials.map(fb => ({
+        name: fb.isAnonymous ? "Verified Client" : (fb.companyName ?? "Anonymous"),
+        role: fb.submissionMonth && fb.submissionYear
+            ? `${MONTHS[fb.submissionMonth - 1]} ${fb.submissionYear}`
+            : new Date(fb.createdAt).toLocaleDateString("en-LK", { month: "long", year: "numeric" }),
+        quote: fb.comments,
+        rating: fb.overallRating,
+      }))
+    : [
+        { name: "Hirdaramani Group", role: "Apparel Industry Client", quote: "Ace Front Line provides exceptional security services across our multiple factory locations. Their ex-military personnel bring unmatched professionalism and discipline.", rating: 5 },
+        { name: "Brandix Intimates", role: "Manufacturing Client", quote: "The reliability and training standards of Ace Front Line's security officers have significantly improved our facility security. Their 24/7 commitment is outstanding.", rating: 5 },
+        { name: "CEAT Kelani", role: "Industrial Client", quote: "Their comprehensive approach to security, combining manned guarding with electronic surveillance, gives us complete peace of mind for our operations.", rating: 5 },
+        { name: "Ceylon Biscuits Limited", role: "FMCG Client", quote: "Ace Front Line has been instrumental in maintaining the security standards at our facilities. Their officers are well-trained, punctual, and always professional.", rating: 5 },
+        { name: "Colombo City Centre", role: "Real Estate Client", quote: "The security team provided by Ace Front Line for our residential complex is exemplary. Residents feel safe and well-protected around the clock.", rating: 5 },
+        { name: "Buddhist Ladies College", role: "Education Client", quote: "We trust Ace Front Line with the safety of our students and staff. Their guards are courteous, vigilant, and highly dependable.", rating: 5 },
+      ];
 
   const totalTestimonialPages = Math.ceil(testimonials.length / TESTIMONIALS_PER_PAGE);
   const visibleTestimonials = testimonials.slice(
@@ -310,7 +337,9 @@ const Index = () => {
                   <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t.role}</p>
                 </div>
                 <div className="flex text-primary">
-                  {[...Array(5)].map((_, j) => <Star key={j} className="h-4 w-4 fill-primary" />)}
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} className={`h-4 w-4 ${j < (t.rating ?? 5) ? "fill-primary" : "fill-muted text-muted-foreground/40"}`} />
+                  ))}
                 </div>
                 <blockquote className="text-muted-foreground italic leading-relaxed">"{t.quote}"</blockquote>
               </div>
@@ -327,6 +356,15 @@ const Index = () => {
               ))}
             </div>
           )}
+          {/* See all reviews button */}
+          <div className="flex justify-center mt-10">
+            <Link
+              to="/reviews"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 py-3 rounded-xl transition-all shadow-sm text-sm"
+            >
+              <Star className="h-4 w-4" /> See All Client Reviews
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -4,8 +4,11 @@ import { paymentApi } from "@/lib/api";
 import {
     CheckCircle2, Clock, AlertTriangle, Search,
     ChevronLeft, ChevronRight, FileText, Eye,
-    TrendingUp, DollarSign, RefreshCw, ShieldCheck
+    TrendingUp, DollarSign, RefreshCw, ShieldCheck, Mail
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/services/api";
 
 const PAGE_SIZE = 10;
 
@@ -32,6 +35,7 @@ const timeAgo = (iso: string | null) => {
 
 const AccountantPayments = () => {
     const navigate = useNavigate();
+    const { toast } = useToast();
 
     const [payments, setPayments]   = useState<any[]>([]);
     const [pending, setPending]     = useState<any[]>([]);
@@ -41,6 +45,22 @@ const AccountantPayments = () => {
     const [search, setSearch]       = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [page, setPage]           = useState(1);
+
+    const handleAction = async (action: string, successMessage: string) => {
+        try {
+          await api.post(`/v1/automation/${action}`);
+          toast({
+            title: "Success",
+            description: successMessage,
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: `Failed to ${action.replace(/-/g, " ")}.`,
+            variant: "destructive",
+          });
+        }
+      };
 
     const load = async () => {
         setLoading(true);
@@ -171,19 +191,32 @@ const AccountantPayments = () => {
                 </div>
             )}
 
-            {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
-                {(["queue","history"] as const).map(t => (
-                    <button key={t} onClick={() => { setTab(t); setPage(1); setSearch(""); setStatusFilter("ALL"); }}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-                            tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-                        }`}>
-                        {t === "queue"
-                            ? `Verification Queue${pending.length > 0 ? ` (${pending.length})` : ""}`
-                            : "Payment History"
-                        }
-                    </button>
-                ))}
+            {/* Tabs & Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
+                <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+                    {(["queue","history"] as const).map(t => (
+                        <button key={t} onClick={() => { setTab(t); setPage(1); setSearch(""); setStatusFilter("ALL"); }}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${
+                                tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+                            }`}>
+                            {t === "queue"
+                                ? `Verification Queue${pending.length > 0 ? ` (${pending.length})` : ""}`
+                                : "Payment History"
+                            }
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => handleAction("send-payment-reminders", "Payment reminders sent.")}>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Send Payment Reminders
+                    </Button>
+                    <Button variant="outline" onClick={() => handleAction("send-overdue-notices", "Overdue notices sent.")}>
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Send Overdue Notices
+                    </Button>
+                </div>
             </div>
 
             {/* Search + filters */}
@@ -224,13 +257,13 @@ const AccountantPayments = () => {
                     <table className="w-full text-left">
                         <thead>
                         <tr className="bg-muted/40 border-b text-[11px] font-bold uppercase tracking-widest text-gray-400">
-                            <th className="px-5 py-3.5">Client</th>
-                            <th className="px-5 py-3.5">Invoice #</th>
-                            <th className="px-5 py-3.5">Amount</th>
-                            <th className="px-5 py-3.5 hidden sm:table-cell">Payment Date</th>
-                            <th className="px-5 py-3.5 hidden md:table-cell">Transaction Ref</th>
-                            <th className="px-5 py-3.5">Uploaded</th>
-                            {tab === "history" && <th className="px-5 py-3.5">Status</th>}
+                            <th className="px-5 py-3.5 text-left">Client</th>
+                            <th className="px-5 py-3.5 text-left">Invoice #</th>
+                            <th className="px-5 py-3.5 text-left">Amount</th>
+                            <th className="px-5 py-3.5 text-left hidden sm:table-cell">Payment Date</th>
+                            <th className="px-5 py-3.5 text-left hidden md:table-cell">Transaction Ref</th>
+                            <th className="px-5 py-3.5 text-left">Uploaded</th>
+                            {tab === "history" && <th className="px-5 py-3.5 text-left">Status</th>}
                             <th className="px-5 py-3.5 text-center">Actions</th>
                         </tr>
                         </thead>

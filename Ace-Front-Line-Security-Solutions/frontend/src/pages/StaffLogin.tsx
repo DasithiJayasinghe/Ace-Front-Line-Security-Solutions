@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const roles = [
   { id: "area-manager", label: "Area Manager", icon: User, desc: "Manage regions, reports & schedules" },
-  { id: "security-officer", label: "Security Officer", icon: Shield, desc: "View paysheets, request leave & uniforms" },
+  { id: "security-officer", label: "Security Officer", icon: Lock, desc: "View paysheets, request leave & uniforms" },
   { id: "accountant", label: "Accountant", icon: Calculator, desc: "Payroll, invoices & financial reports" },
   { id: "admin", label: "Admin", icon: Settings, desc: "Management & oversight" },
 ];
@@ -43,6 +43,10 @@ const StaffLogin = () => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
         localStorage.setItem('email', email);
+        localStorage.removeItem('companyName');
+        localStorage.removeItem('clientId');
+        localStorage.removeItem('username');
+        localStorage.removeItem('isFirstLogin');
 
         // Redirect based on the URL provided by the backend
         navigate(data.redirectUrl);
@@ -62,7 +66,7 @@ const StaffLogin = () => {
       <div className="min-h-screen bg-accent flex items-center justify-center px-4 py-12">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
           <div className="text-center mb-8">
-            <Shield className="h-12 w-12 text-primary mx-auto mb-4" />
+            <img src="/logo.png" alt="Ace Front Line Security Logo" className="h-12 w-12 mx-auto mb-4" />
             <h1 className="text-3xl font-black text-accent-foreground">Staff Login</h1>
             <p className="text-accent-foreground/60 mt-2">Select your role and sign in</p>
           </div>

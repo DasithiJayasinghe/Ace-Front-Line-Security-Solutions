@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, Shield, ExternalLink } from "lucide-react";
+import { Eye, EyeOff, Lock, Shield, ExternalLink, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -29,6 +29,8 @@ const ClientLogin = () => {
                 localStorage.setItem("role",        data.role);
                 localStorage.setItem("clientId",    String(data.clientId));
                 localStorage.setItem("companyName", data.companyName);
+                localStorage.setItem("username",    username);
+                localStorage.removeItem("email");
                 if (data.firstLogin) localStorage.setItem("isFirstLogin", "true");
                 navigate(data.redirectUrl || "/client/dashboard");
             } else {
@@ -46,15 +48,7 @@ const ClientLogin = () => {
     return (
         <div className="min-h-screen bg-accent flex flex-col">
             {/* Top bar */}
-            <header className="flex items-center justify-between px-6 py-4">
-                <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                        <Shield className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                    <span className="font-black text-sm tracking-tight text-accent-foreground">Ace Front Line Security</span>
-                </div>
-                <a href="mailto:acefrontlines@gmail.com" className="text-sm text-accent-foreground/60 hover:text-primary font-medium">Support</a>
-            </header>
+            <header className="flex items-center justify-center px-6 py-4" />
 
             {/* Login card */}
             <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -65,7 +59,7 @@ const ClientLogin = () => {
                 >
                     {/* Icon + title above card */}
                     <div className="text-center mb-8">
-                        <Shield className="h-12 w-12 text-primary mx-auto mb-4" />
+                        <img src="/logo.png" alt="Ace Front Line Security Logo" className="h-12 w-12 mx-auto mb-4" />
                         <h1 className="text-3xl font-black text-accent-foreground">Client Login</h1>
                         <p className="text-accent-foreground/60 mt-2">Access your security dashboard</p>
                     </div>
@@ -141,26 +135,17 @@ const ClientLogin = () => {
                                 <><Lock className="h-4 w-4 mr-2" /> Login to Portal</>
                             )}
                         </Button>
-
-                        {/* Support link */}
                         <p className="text-center text-sm text-muted-foreground">
-                            Need help?{" "}
-                            <a href="mailto:acefrontlines@gmail.com" className="font-semibold text-foreground hover:text-primary inline-flex items-center gap-0.5">
-                                Contact Support <ExternalLink className="h-3 w-3" />
-                            </a>
+                            <a href="/" className="hover:text-primary">← Back to Home</a>
                         </p>
                     </form>
+
                 </motion.div>
             </main>
 
             {/* Footer */}
             <footer className="text-center py-6 text-xs text-accent-foreground/50 space-y-2 border-t border-accent-foreground/10">
                 <p>© 2026 Ace Front Line Security Solutions. All rights reserved.</p>
-                <div className="flex justify-center gap-4">
-                    <a href="#" className="hover:text-primary">Privacy Policy</a>
-                    <a href="#" className="hover:text-primary">Terms of Service</a>
-                    <a href="#" className="hover:text-primary">Legal Information</a>
-                </div>
             </footer>
         </div>
     );

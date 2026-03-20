@@ -19,9 +19,9 @@ const verificationBadge = (s: string) => {
     return m[s] ?? "bg-gray-100 text-gray-500 border border-gray-200";
 };
 const verificationLabel = (s: string) => {
-    if (s === "VERIFIED") return "✓ Verified";
-    if (s === "REJECTED") return "✗ Rejected";
-    if (s === "PENDING")  return "⏳ Pending Review";
+    if (s === "VERIFIED") return "Verified";
+    if (s === "REJECTED") return "Rejected";
+    if (s === "PENDING")  return "Pending Review";
     return s;
 };
 
@@ -38,6 +38,7 @@ const ClientPayments = () => {
     const [filter, setFilter]     = useState("ALL");
     const [page, setPage]         = useState(1);
     const [downloading, setDownloading] = useState<number | null>(null);
+    const [rejectionReasonModal, setRejectionReasonModal] = useState<string | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -188,23 +189,47 @@ const ClientPayments = () => {
 
             {err && <p className="text-red-600 text-sm">{err}</p>}
 
+            {/* Rejection Reason Modal */}
+            {rejectionReasonModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={() => setRejectionReasonModal(null)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3 className="text-base font-bold text-gray-900 mb-3">Rejection Reason</h3>
+                        <div className="rounded-xl bg-red-50 border border-red-100 p-4">
+                            <p className="text-sm text-red-700 leading-relaxed">{rejectionReasonModal}</p>
+                        </div>
+                        <button
+                            onClick={() => setRejectionReasonModal(null)}
+                            className="mt-4 w-full py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Payment Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead>
-                        <tr className="text-[11px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-50">
-                            <th className="px-5 py-3.5">Invoice #</th>
-                            <th className="px-5 py-3.5">Amount Paid</th>
-                            <th className="px-5 py-3.5 hidden sm:table-cell">Payment Date</th>
-                            <th className="px-5 py-3.5 hidden md:table-cell">Transaction Ref</th>
-                            <th className="px-5 py-3.5 hidden lg:table-cell">Method</th>
-                            <th className="px-5 py-3.5">Submitted</th>
-                            <th className="px-5 py-3.5">Status</th>
-                            <th className="px-5 py-3.5 text-right">Actions</th>
+                        <thead className="bg-gray-100 border-b-2 border-gray-200">
+                        <tr className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                            <th className="px-5 py-3 text-left">Invoice #</th>
+                            <th className="px-5 py-3 text-left">Amount Paid</th>
+                            <th className="px-5 py-3 text-left hidden sm:table-cell">Payment Date</th>
+                            <th className="px-5 py-3 text-left hidden md:table-cell">Transaction Ref</th>
+                            <th className="px-5 py-3 text-left hidden lg:table-cell">Method</th>
+                            <th className="px-5 py-3 text-left">Submitted</th>
+                            <th className="px-5 py-3 text-left">Status</th>
+                            <th className="px-5 py-3 text-right">Actions</th>
                         </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-100">
                         {paginated.length === 0 ? (
                             <tr>
                                 <td colSpan={8} className="px-5 py-16 text-center">
@@ -227,7 +252,7 @@ const ClientPayments = () => {
                             <tr key={p.paymentId} className={`hover:bg-gray-50 transition-colors ${
                                 p.verificationStatus === "REJECTED" ? "bg-red-50/30" : ""
                             }`}>
-                                <td className="px-5 py-4 font-semibold text-sm text-gray-900">
+                                <td className="px-5 py-3 font-semibold text-sm text-gray-900">
                                     <button
                                         onClick={() => navigate(`/client/invoices/${p.invoiceId}`)}
                                         className="hover:text-primary hover:underline transition-colors"
@@ -235,34 +260,37 @@ const ClientPayments = () => {
                                         {p.invoiceNumber ?? `INV-${p.invoiceId}`}
                                     </button>
                                 </td>
-                                <td className="px-5 py-4 font-bold text-sm text-gray-900">
+                                <td className="px-5 py-3 font-bold text-sm text-gray-900">
                                     {formatLKR(p.amountPaid ?? 0)}
                                 </td>
-                                <td className="px-5 py-4 text-sm text-gray-600 hidden sm:table-cell">
+                                <td className="px-5 py-3 text-sm text-gray-600 hidden sm:table-cell">
                                     {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-LK") : "—"}
                                 </td>
-                                <td className="px-5 py-4 text-xs text-gray-600 hidden md:table-cell font-mono">
+                                <td className="px-5 py-3 text-xs text-gray-600 hidden md:table-cell font-mono">
                                     {p.transactionReference ?? "—"}
                                 </td>
-                                <td className="px-5 py-4 text-sm text-gray-600 hidden lg:table-cell capitalize">
+                                <td className="px-5 py-3 text-sm text-gray-600 hidden lg:table-cell capitalize">
                                     {(p.paymentMethod ?? "").toLowerCase().replace(/_/g, " ")}
                                 </td>
-                                <td className="px-5 py-4 text-xs text-gray-500">
+                                <td className="px-5 py-3 text-xs text-gray-500">
                                     {p.proofUploadedAt
                                         ? new Date(p.proofUploadedAt).toLocaleDateString("en-LK")
                                         : "—"}
                                 </td>
-                                <td className="px-5 py-4">
+                                <td className="px-5 py-3">
                                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${verificationBadge(p.verificationStatus)}`}>
                                         {verificationLabel(p.verificationStatus)}
                                     </span>
                                     {p.verificationStatus === "REJECTED" && p.rejectionReason && (
-                                        <p className="text-[10px] text-red-600 mt-0.5 max-w-[140px] truncate" title={p.rejectionReason}>
-                                            {p.rejectionReason}
-                                        </p>
+                                        <button
+                                            onClick={() => setRejectionReasonModal(p.rejectionReason)}
+                                            className="block text-[10px] text-red-500 mt-1 hover:underline"
+                                        >
+                                            View reason
+                                        </button>
                                     )}
                                 </td>
-                                <td className="px-5 py-4">
+                                <td className="px-5 py-3">
                                     <div className="flex items-center justify-end gap-1">
                                         <button
                                             onClick={() => navigate(`/client/invoices/${p.invoiceId}`)}

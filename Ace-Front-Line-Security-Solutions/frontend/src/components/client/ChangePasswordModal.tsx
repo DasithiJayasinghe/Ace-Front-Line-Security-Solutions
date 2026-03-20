@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { clientApi } from "@/lib/api";
-import { Eye, EyeOff, ArrowRight, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, Eye, EyeOff, KeyRound, X } from "lucide-react";
 
 interface ChangePasswordModalProps {
     clientId: number;
@@ -17,6 +18,7 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [overlayBounds, setOverlayBounds] = useState<React.CSSProperties | null>(null);
 
     const checks = useMemo(() => ({
         length: newPassword.length >= 8,
@@ -27,6 +29,35 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
 
     const passedChecks = Object.values(checks).filter(Boolean).length;
     const strengthLabel = passedChecks <= 1 ? "Weak" : passedChecks === 2 ? "Medium" : passedChecks === 3 ? "Good" : "Strong";
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [onClose]);
+
+    useEffect(() => {
+        const updateBounds = () => {
+            const main = document.getElementById("dashboard-main");
+            if (!main) {
+                setOverlayBounds({ top: 0, right: 0, bottom: 0, left: 0 });
+                return;
+            }
+            const rect = main.getBoundingClientRect();
+            setOverlayBounds({
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+            });
+        };
+
+        updateBounds();
+        window.addEventListener("resize", updateBounds);
+        return () => window.removeEventListener("resize", updateBounds);
+    }, []);
 
     const handleSubmit = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
@@ -53,31 +84,41 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
         }
     };
 
-    const inputClass = "w-full bg-muted/50 border-2 border-transparent rounded-2xl px-5 py-4 text-sm focus:bg-card focus:border-primary focus:ring-0 transition-all outline-none pr-12";
+    const inputClass = "w-full bg-muted/50 border-2 border-transparent rounded-xl px-4 py-3.5 text-sm focus:bg-card focus:border-primary focus:ring-0 transition-all outline-none pr-11";
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
-            <div className="w-full max-w-[420px] bg-card rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
-                {/* Header */}
+    const modal = (
+        <div
+            className="fixed z-[100] bg-black/40 backdrop-blur-sm p-4 flex items-center justify-center"
+            style={overlayBounds ?? { top: 0, right: 0, bottom: 0, left: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Change password"
+            onMouseDown={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div className="w-full max-w-md max-h-[calc(100vh-2rem)] bg-card rounded-2xl shadow-2xl border overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between px-6 py-4 border-b">
                     <div className="flex items-center gap-2.5">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                            <span className="material-symbols-outlined text-base">lock</span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                            <KeyRound className="h-4 w-4" />
                         </div>
                         <span className="text-sm font-extrabold uppercase tracking-tight">Change Password</span>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Close"
                     >
                         <X className="h-4 w-4" />
                     </button>
                 </div>
 
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 overflow-y-auto">
 
                     {/* Title */}
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-center">
                         <h2 className="text-xl font-black tracking-tight">
                             {isFirstLogin ? "Set Your New Password" : "Change Password"}
                         </h2>
@@ -110,8 +151,10 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
                                     onChange={(e) => setCurrentPassword(e.target.value)}
                                 />
                                 <button
+                                    type="button"
                                     onClick={() => setShowCurrent(!showCurrent)}
-                                    className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                    aria-label={showCurrent ? "Hide current password" : "Show current password"}
                                 >
                                     {showCurrent ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </button>
@@ -132,8 +175,10 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
                                     onChange={(e) => setNewPassword(e.target.value)}
                                 />
                                 <button
+                                    type="button"
                                     onClick={() => setShowNew(!showNew)}
-                                    className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                    aria-label={showNew ? "Hide new password" : "Show new password"}
                                 >
                                     {showNew ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </button>
@@ -172,10 +217,15 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
                                     { label: "At least one number", ok: checks.number },
                                     { label: "At least one special character", ok: checks.special },
                                 ].map((rule) => (
-                                    <li key={rule.label} className={`flex items-center gap-1.5 text-[11px] ${rule.ok ? "font-bold" : "font-medium text-muted-foreground"}`}>
-                    <span className={`material-symbols-outlined text-sm ${rule.ok ? "text-emerald-500" : ""}`}>
-                      {rule.ok ? "check_circle" : "radio_button_unchecked"}
-                    </span>
+                                    <li
+                                        key={rule.label}
+                                        className={`flex items-center gap-1.5 text-[11px] ${rule.ok ? "font-bold" : "font-medium text-muted-foreground"}`}
+                                    >
+                                        {rule.ok ? (
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                        ) : (
+                                            <Circle className="h-4 w-4 text-muted-foreground" />
+                                        )}
                                         {rule.label}
                                     </li>
                                 ))}
@@ -196,8 +246,10 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                 />
                                 <button
+                                    type="button"
                                     onClick={() => setShowConfirm(!showConfirm)}
-                                    className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                    aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
                                 >
                                     {showConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </button>
@@ -224,6 +276,9 @@ const ChangePasswordModal = ({ clientId, onClose }: ChangePasswordModalProps) =>
             </div>
         </div>
     );
+
+    if (typeof document === "undefined") return modal;
+    return createPortal(modal, document.body);
 };
 
 export default ChangePasswordModal;

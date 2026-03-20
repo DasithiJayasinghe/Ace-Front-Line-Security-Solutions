@@ -197,19 +197,15 @@ const AccountantCreateInvoice = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="space-y-6">
             {/* Breadcrumb */}
-            <div className="bg-white border-b px-6 py-3">
-                <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Link to="/accountant/invoices" className="hover:text-foreground">Accountant</Link>
-                    <ChevronRight className="h-4 w-4" />
-                    <Link to="/accountant/invoices" className="hover:text-foreground">Invoices</Link>
-                    <ChevronRight className="h-4 w-4" />
-                    <span className="text-foreground font-medium">Create New</span>
-                </nav>
-            </div>
+            <nav className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Link to="/accountant/invoices" className="hover:text-foreground">Invoices</Link>
+                <ChevronRight className="h-4 w-4" />
+                <span className="text-foreground font-medium">Create New</span>
+            </nav>
 
-            <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8 space-y-6 pb-32">
+            <div className="space-y-6 px-8 lg:px-16">
                 {/* Page heading */}
                 <div>
                     <h1 className="text-2xl font-black">Create Manual Invoice</h1>
@@ -521,23 +517,23 @@ const AccountantCreateInvoice = () => {
                 </div>
             </div>
 
-            {/* ── Sticky Bottom Action Bar ── */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-6 py-4 flex items-center justify-between z-30">
+            {/* ── Action Bar ── */}
+            <div className="bg-card rounded-2xl border shadow-sm px-6 py-4 flex items-center justify-between">
                 <Link
                     to="/accountant/invoices"
-                    className="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors"
+                    className="text-sm text-muted-foreground hover:text-foreground font-medium transition-colors"
                 >
-                    ← Cancel &amp; Discard
+                    &larr; Cancel &amp; Discard
                 </Link>
                 <div className="flex gap-3">
                     <button
                         type="button"
                         onClick={() => handleSubmit(false)}
                         disabled={submitting}
-                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold border-2 border-input rounded-xl hover:bg-muted transition-colors disabled:opacity-50"
                     >
                         {submitting ? (
-                            <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                            <span className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
                         ) : (
                             <Save className="h-4 w-4" />
                         )}
@@ -547,10 +543,10 @@ const AccountantCreateInvoice = () => {
                         type="button"
                         onClick={() => handleSubmit(true)}
                         disabled={submitting}
-                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-black bg-yellow-400 text-black rounded-xl hover:bg-yellow-500 transition-colors disabled:opacity-50 shadow-md shadow-yellow-200"
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-black bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 shadow-md"
                     >
                         {submitting ? (
-                            <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                            <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                         ) : (
                             <Send className="h-4 w-4" />
                         )}

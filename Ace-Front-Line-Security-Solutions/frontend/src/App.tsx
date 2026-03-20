@@ -25,6 +25,8 @@ import AccountantInvoiceReview from "./pages/accountant/AccountantInvoiceReview"
 import AccountantCreateInvoice from "./pages/accountant/AccountantCreateInvoice";
 import ClientManagement from "./pages/operational-manager/ClientManagement";
 import ClientFeedback from "./pages/client/ClientFeedback";
+import AccountantDeductions from "./pages/accountant/AccountantDeductions";
+import AccountantCreateDeduction from "./pages/accountant/AccountantCreateDeduction";
 import ClientUploadPaymentProof from "./pages/client/ClientUploadPaymentProof";
 import AccountantPayments from "./pages/accountant/AccountantPayments";
 import AccountantPaymentVerify from "./pages/accountant/AccountantPaymentVerify";
@@ -51,7 +53,7 @@ const accountantItems = [
     { label: "Monthly Statistics",path: "monthly-statistics" },
     { label: "Advance Requests",  path: "advance-requests" },
     { label: "Officers",          path: "officers" },
-    { label: "Invoices",          path: "invoices" },          // ← will now use real page
+    { label: "Invoices",          path: "invoices" },
     { label: "Reports",           path: "reports" },
     { label: "Payments",          path: "payments" },
     { label: "Deductions",        path: "deductions" },
@@ -111,9 +113,8 @@ const clientItems = [
     { label: "Projects",      path: "projects" },
     { label: "Inquiries",     path: "inquiries" },
     { label: "Shift Schedule",path: "shift-schedule" },
-    { label: "Invoices",         path: "invoices" },   // ← will now use real page
-    { label: "Payments",         path: "payments" },
-    { label: "Company Profile",  path: "company-profile" },
+    { label: "Invoices",      path: "invoices" },
+    { label: "Payments",      path: "payments" },
 ];
 
 function renderDashboardRoutes(items: { label: string; path: string }[]) {
@@ -154,8 +155,7 @@ function renderClientRoutes(items: { label: string; path: string }[]) {
                     />
                 ))}
 
-            <Route path="company-profile" element={<ClientProfile />} />
-            <Route path="profile" element={<PlaceholderPage title="Profile" />} />
+            <Route path="profile" element={<ClientProfile />} />
         </>
     );
 }
@@ -202,7 +202,8 @@ const App = () => (
                         <Route path="reports"           element={<PlaceholderPage title="Reports" />} />
                         <Route path="payments"          element={<AccountantPayments />} />
                         <Route path="payments/:paymentId" element={<AccountantPaymentVerify />} />
-                        <Route path="deductions"        element={<PlaceholderPage title="Deductions" />} />
+                        <Route path="deductions"        element={<AccountantDeductions />} />
+                        <Route path="deductions/create" element={<AccountantCreateDeduction />} />
                         <Route path="loans"             element={<PlaceholderPage title="Loans" />} />
                         <Route path="profile"           element={<PlaceholderPage title="Profile" />} />
                     </Route>

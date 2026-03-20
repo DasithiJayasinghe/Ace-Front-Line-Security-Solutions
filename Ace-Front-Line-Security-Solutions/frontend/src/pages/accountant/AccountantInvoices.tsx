@@ -271,7 +271,7 @@ const AccountantInvoices = () => {
             {/* ── Page header ── */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h2 className="text-2xl font-bold">Invoice Management</h2>
+                    <h2 className="text-2xl font-black">Invoice Management</h2>
                     <p className="text-sm text-muted-foreground mt-1">
                         Manage, review and issue all client invoices
                     </p>
@@ -313,7 +313,7 @@ const AccountantInvoices = () => {
                 <div className="flex gap-0">
                     <button
                         onClick={() => setActiveTab("list")}
-                        className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                        className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-colors ${
                             activeTab === "list"
                                 ? "border-yellow-400 text-foreground"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -324,7 +324,7 @@ const AccountantInvoices = () => {
                     </button>
                     <button
                         onClick={() => setActiveTab("queue")}
-                        className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                        className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-colors ${
                             activeTab === "queue"
                                 ? "border-yellow-400 text-foreground"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -435,7 +435,8 @@ const AccountantInvoices = () => {
                                         return (
                                             <>
                                                 <tr key={inv.invoiceId}
-                                                    className={`transition-colors hover:bg-muted/20 ${
+                                                    onClick={() => navigate(`/accountant/invoices/review/${inv.invoiceId}`)}
+                                                    className={`cursor-pointer transition-colors hover:bg-yellow-50/40 ${
                                                         inv.status === "OVERDUE" ? "bg-red-50/30" :
                                                         inv.status === "DRAFT"   ? "bg-yellow-50/20" : ""
                                                     }`}>
@@ -463,35 +464,27 @@ const AccountantInvoices = () => {
                                                             : <span className="text-green-600 text-xs font-medium">Paid</span>
                                                         }
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="flex items-center justify-center gap-1.5">
-                                                            {/* Review — for drafts */}
-                                                            {isDraft && (
-                                                                <button
-                                                                    onClick={() => navigate(`/accountant/invoices/review/${inv.invoiceId}`)}
-                                                                    className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                                                                >
-                                                                    Review
-                                                                </button>
-                                                            )}
-                                                            {/* PDF */}
+                                                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            {/* Expand/Collapse */}
+                                                            <button
+                                                                onClick={() => setExpanded(open ? null : inv.invoiceId)}
+                                                                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors text-gray-500"
+                                                                title={open ? "Collapse" : "View details"}
+                                                            >
+                                                                {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                            </button>
+                                                            {/* Download */}
                                                             <button
                                                                 onClick={() => handleDownload(inv)}
                                                                 disabled={downloading === inv.invoiceId}
-                                                                className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 whitespace-nowrap border border-gray-200"
+                                                                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors text-gray-500 disabled:opacity-50"
+                                                                title="Download PDF"
                                                             >
                                                                 {downloading === inv.invoiceId
-                                                                    ? <span className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-                                                                    : <Download className="w-3 h-3" />
+                                                                    ? <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin inline-block" />
+                                                                    : <Download className="w-4 h-4" />
                                                                 }
-                                                                PDF
-                                                            </button>
-                                                            {/* Expand */}
-                                                            <button
-                                                                onClick={() => setExpanded(open ? null : inv.invoiceId)}
-                                                                className="p-1.5 rounded-lg border hover:bg-muted/40 transition-colors"
-                                                            >
-                                                                {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                                             </button>
                                                         </div>
                                                     </td>
@@ -758,8 +751,8 @@ const AccountantInvoices = () => {
 
                     {/* Floating batch action bar */}
                     {selectedIds.size > 0 && (
-                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-                            <div className="bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3 flex items-center gap-4">
+                        <div className="fixed bottom-6 left-64 right-0 z-50 flex justify-center pointer-events-none">
+                            <div className="bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3 flex items-center gap-4 pointer-events-auto">
                                 <span className="text-sm font-semibold">{selectedIds.size} Selected</span>
                                 <button onClick={() => setSelectedIds(new Set())} className="text-sm text-gray-400 hover:text-white transition-colors">
                                     Clear

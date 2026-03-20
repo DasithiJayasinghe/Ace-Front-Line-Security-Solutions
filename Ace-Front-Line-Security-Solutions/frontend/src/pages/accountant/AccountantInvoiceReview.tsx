@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
-    ChevronRight, Printer, Trash2, X, AlertCircle,
+    ChevronRight, Printer, Download, Trash2, X, AlertCircle,
     CheckCircle, Zap, FileText,
 } from "lucide-react";
 import { invoiceApi } from "@/lib/api";
+import { downloadInvoicePdf } from "@/utils/downloadInvoicePdf";
 
 // ── Types (mirrors InvoiceResponse from backend) ─────────────────────────────
 
@@ -72,6 +73,7 @@ const AccountantInvoiceReview = () => {
     const [loading, setLoading]         = useState(true);
     const [approving, setApproving]     = useState(false);
     const [deleting, setDeleting]       = useState(false);
+    const [downloading, setDownloading] = useState(false);
     const [actionMsg, setActionMsg]     = useState("");
     const [actionError, setActionError] = useState("");
     const [notes, setNotes]             = useState("");
@@ -145,6 +147,19 @@ const AccountantInvoiceReview = () => {
         }
     };
 
+    const handleDownload = async () => {
+        if (!invoice) return;
+        setDownloading(true);
+        setActionError("");
+        try {
+            await downloadInvoicePdf(invoice.invoiceId, invoice.invoiceNumber);
+        } catch (e: any) {
+            setActionError(e?.message ?? "Failed to download invoice PDF.");
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center py-24">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -210,7 +225,7 @@ const AccountantInvoiceReview = () => {
                     {/* Header */}
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 className="text-xl font-bold">Review Invoice</h2>
+                            <h2 className="text-2xl font-black">Review Invoice</h2>
                             <p className="text-sm text-muted-foreground">
                                 Review all details before approving and issuing to client.
                             </p>
@@ -239,6 +254,14 @@ const AccountantInvoiceReview = () => {
                                 <Printer className="w-3.5 h-3.5" />
                                 Print
                             </button>
+                            <button
+                                onClick={handleDownload}
+                                disabled={downloading}
+                                className="flex items-center gap-1.5 border rounded-xl px-3 py-1.5 text-xs font-semibold hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                {downloading ? "Downloading..." : "Download"}
+                            </button>
                         </div>
                     </div>
 
@@ -250,9 +273,11 @@ const AccountantInvoiceReview = () => {
                             <div className="flex flex-col sm:flex-row justify-between gap-6">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center">
-                                            <span className="text-black font-black text-xs">ACE</span>
-                                        </div>
+                                        <img
+                                            src="/logo.png"
+                                            alt="Ace Front Line Security Logo"
+                                            className="w-10 h-10 rounded-lg object-cover"
+                                        />
                                         <div>
                                             <p className="font-black text-sm leading-tight">ACE FRONT LINE SECURITY SOLUTIONS (PVT) LTD</p>
                                             <p className="text-xs text-muted-foreground">Professional Security Services</p>

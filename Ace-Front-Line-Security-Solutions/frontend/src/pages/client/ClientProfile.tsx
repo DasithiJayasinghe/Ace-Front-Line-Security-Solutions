@@ -319,19 +319,19 @@ const ClientProfile = () => {
                 </div>
                 <div className="divide-y divide-gray-50">
                     {/* Password row */}
-                    <div className="flex items-center justify-between px-6 py-4">
-                        <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-4 min-w-0">
                             <div className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
                                 <KeyRound className="h-4.5 w-4.5 text-gray-500" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-sm font-semibold text-gray-800">Password</p>
-                                <p className="text-xs text-gray-400 mt-0.5">Last changed: Unknown · Keep your account secure</p>
+                                <p className="text-xs text-gray-400 mt-0.5 truncate">Last changed: Unknown · Keep your account secure</p>
                             </div>
                         </div>
                         <button
                             onClick={() => setShowChangePassword(true)}
-                            className="text-xs font-bold text-primary border border-primary/20 hover:bg-primary/5 px-4 py-1.5 rounded-lg transition-all shrink-0"
+                            className="w-full sm:w-auto text-xs font-bold text-primary border border-primary/20 hover:bg-primary/5 px-4 py-2 rounded-lg transition-all shrink-0"
                         >
                             Change Password
                         </button>

@@ -29,6 +29,7 @@ export interface Client {
     recommendedOfficers: number;
     activeOfficersCount: number;
     totalOutstanding: number;
+    riskLevel?: RiskLevel;
     status: ClientStatus;
     registeredAt: string;
     updatedAt: string;

@@ -172,11 +172,11 @@ const ClientList = ({ clients, loading, error, onRegister, onRefresh }: ClientLi
                             <table className="w-full text-left">
                                 <thead>
                                 <tr className="bg-muted/50 border-b">
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Client Code</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Company Name</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Contact Person</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Service End Date</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-left">Client Code</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-left">Company Name</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-left">Contact Person</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-left">Status</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-left">Service End Date</th>
                                     <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Balance</th>
                                     <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Actions</th>
                                 </tr>

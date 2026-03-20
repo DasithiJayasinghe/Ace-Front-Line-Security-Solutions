@@ -172,3 +172,45 @@ export const paymentApi = {
         URL.revokeObjectURL(url);
     },
 };
+
+export const deductionApi = {
+    /** Create a new deduction record */
+    create: (data: {
+        clientId: number;
+        deductionType: string;
+        amount: number;
+        incidentDate: string;      // "YYYY-MM-DD"
+        description: string;
+        officerName?: string;
+        targetBillingMonth: number;
+        targetBillingYear: number;
+    }) => apiFetch<any>("/deductions", { method: "POST", body: JSON.stringify(data) }),
+
+    /** Get all deductions */
+    getAll: () => apiFetch<any[]>("/deductions"),
+
+    /** Get a single deduction by ID */
+    getById: (id: number) => apiFetch<any>(`/deductions/${id}`),
+
+    /** Get all deductions for a specific client */
+    getByClient: (clientId: number) => apiFetch<any[]>(`/deductions/client/${clientId}`),
+
+    /** Get unapplied deductions for a client */
+    getUnapplied: (clientId: number) => apiFetch<any[]>(`/deductions/client/${clientId}/unapplied`),
+
+    /** Get total unapplied amount for a client */
+    getTotalUnapplied: (clientId: number) => apiFetch<number>(`/deductions/client/${clientId}/total-unapplied`),
+
+    /** Get deductions pending accountant approval */
+    getPendingApproval: () => apiFetch<any[]>("/deductions/pending-approval"),
+
+    /** Accountant: Approve a deduction */
+    approve: (id: number) => apiFetch<any>(`/deductions/${id}/approve`, { method: "PUT" }),
+
+    /** Accountant: Reject a deduction with a reason */
+    reject: (id: number, reason: string) =>
+        apiFetch<any>(`/deductions/${id}/reject`, { method: "PUT", body: JSON.stringify({ reason }) }),
+
+    /** Delete a deduction (only allowed if not yet applied to invoice) */
+    delete: (id: number) => apiFetch<any>(`/deductions/${id}`, { method: "DELETE" }),
+};

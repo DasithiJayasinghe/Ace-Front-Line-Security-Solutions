@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import ChangePasswordModal from "@/components/client/ChangePasswordModal";
-import { clientApi } from "@/lib/api";
-import type { ClientDashboardData } from "@/types/client";
+import { clientApi, invoiceApi } from "@/lib/api";
+import type { ClientDashboardData, Invoice } from "@/types/client";
 import {
     Download, CloudUpload, ChevronRight,
-    Bell, Star, Shield, AlertTriangle, Info, CreditCard, Phone,
+    Star, Shield, AlertTriangle, CreditCard, Phone,
     Building2, User, Calendar, MapPin, Users,
-    CheckCircle2, Activity, TrendingUp,
+    Activity, TrendingUp,
 } from "lucide-react";
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const ClientDashboard = () => {
     const [data, setData]                             = useState<ClientDashboardData | null>(null);
     const [loading, setLoading]                       = useState(true);
     const [err, setErr]                               = useState("");
     const [showChangePassword, setShowChangePassword] = useState(false);
+    const [recentInvoices, setRecentInvoices]         = useState<Invoice[]>([]);
+    const [invoicesErr, setInvoicesErr]               = useState("");
+    const [invoicesLoading, setInvoicesLoading]       = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -37,6 +42,21 @@ const ClientDashboard = () => {
                 const res = await clientApi.getDashboard(Number(clientIdRaw));
                 setData(res);
                 if (localStorage.getItem("isFirstLogin") === "true") setShowChangePassword(true);
+
+                // Load real invoices for the dashboard table
+                setInvoicesLoading(true);
+                setInvoicesErr("");
+                try {
+                    const inv = await invoiceApi.getByClient(Number(clientIdRaw));
+                    const sorted = [...inv].sort((a, b) =>
+                        (b.billingYear ?? 0) - (a.billingYear ?? 0) || (b.billingMonth ?? 0) - (a.billingMonth ?? 0)
+                    );
+                    setRecentInvoices(sorted.slice(0, 5));
+                } catch (e: any) {
+                    setInvoicesErr(e?.message ?? "Failed to load invoices");
+                } finally {
+                    setInvoicesLoading(false);
+                }
             } catch (e: any) {
                 setErr(e?.message ?? "Failed to load dashboard");
             } finally {
@@ -80,22 +100,6 @@ const ClientDashboard = () => {
         { id: "INV-2023-007", period: "July 01 – July 31, 2023", amount: 4150.00, status: "PAID"   },
     ];
 
-    const statusInvBadge = (s: string) => {
-        const map: Record<string, string> = {
-            ISSUED:  "bg-amber-100 text-amber-700",
-            PAID:    "bg-emerald-100 text-emerald-700",
-            OVERDUE: "bg-red-100 text-red-700",
-            PENDING: "bg-sky-100 text-sky-700",
-        };
-        return map[s] ?? "bg-gray-100 text-gray-500";
-    };
-
-    const notifications = [
-        { Icon: AlertTriangle, iconColor: "text-amber-500",  bg: "bg-amber-50",  border: "border-amber-200",  bar: "bg-amber-400",  title: "Payment Overdue", text: "Invoice INV-2023-009 is past its due date.",     time: "2d ago" },
-        { Icon: Info,          iconColor: "text-sky-500",    bg: "bg-sky-50",    border: "border-sky-200",    bar: "bg-sky-400",    title: "Invoice Issued",  text: "Sept billing cycle invoice is now available.",  time: "3d ago" },
-        { Icon: CheckCircle2,  iconColor: "text-emerald-500",bg: "bg-emerald-50",border: "border-emerald-200",bar: "bg-emerald-400",title: "Service Active",  text: "All security personnel are on duty today.",     time: "Today"  },
-    ];
-
     const quickStats = [
         { label: "Monthly Fee",      value: `LKR ${(data.monthlyBaseFee ?? 4150).toLocaleString("en-LK", { minimumFractionDigits: 2 })}`, Icon: CreditCard,    color: "text-indigo-600",   bg: "bg-indigo-50",   trend: "Due 10th of month"   },
         { label: "Active Officers",  value: `${data.activeOfficersCount ?? 2}`,                                                           Icon: Users,         color: "text-emerald-600",  bg: "bg-emerald-50",  trend: "On duty now"         },
@@ -137,7 +141,7 @@ const ClientDashboard = () => {
                     </div>
 
                     {/* Right: building image area */}
-                    <div className="hidden lg:flex lg:col-span-2 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 relative overflow-hidden items-center justify-center min-h-[240px]">
+                    <div className="hidden lg:flex lg:col-span-2 relative overflow-hidden items-center justify-center min-h-[240px]" style={{ background: "linear-gradient(135deg, #334155, #1e293b, #0f172a)" }}>
                         {/* Decorative rings */}
                         <div className="absolute w-64 h-64 rounded-full border border-white/5" />
                         <div className="absolute w-48 h-48 rounded-full border border-white/8" />
@@ -256,39 +260,6 @@ const ClientDashboard = () => {
                 </div>
             </div>
 
-            {/* ── Recent Alerts ── */}
-            <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-sm flex items-center gap-2">
-                        <span className="h-7 w-7 rounded-lg bg-red-50 flex items-center justify-center">
-                            <Bell className="h-3.5 w-3.5 text-red-500" />
-                        </span>
-                        Recent Alerts
-                        <span className="h-4.5 w-4.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none px-1.5">
-                            {notifications.length}
-                        </span>
-                    </h3>
-                    <button className="text-xs text-indigo-500 font-semibold hover:underline">Mark all read</button>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                    {notifications.map((n, i) => (
-                        <div key={i} className={`relative overflow-hidden rounded-xl border ${n.border} ${n.bg} p-4`}>
-                            <div className={`absolute left-0 inset-y-0 w-1 ${n.bar} rounded-l-xl`} />
-                            <div className="pl-3 flex items-start gap-2.5">
-                                <n.Icon className={`h-4 w-4 ${n.iconColor} mt-0.5 shrink-0`} />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                                        <span className="text-xs font-bold text-gray-800">{n.title}</span>
-                                        <span className="text-[10px] text-gray-400 shrink-0">{n.time}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-600 leading-relaxed">{n.text}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
             {/* ── Payment Summary + Recent Invoices ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Payment Summary */}
@@ -299,7 +270,7 @@ const ClientDashboard = () => {
                         </span>
                         Payment Summary
                     </h3>
-                    <div className="bg-gradient-to-br from-indigo-50 to-slate-50 rounded-xl p-4 border border-indigo-100/60">
+                    <div className="rounded-xl p-4 border border-indigo-100/60" style={{ background: "linear-gradient(135deg, #eef2ff, #f1f5f9)" }}>
                         <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Total Outstanding</p>
                         <p className="text-2xl font-black text-gray-900 mt-1">
                             LKR {data.totalOutstanding.toLocaleString("en-LK", { minimumFractionDigits: 2 })}
@@ -331,7 +302,7 @@ const ClientDashboard = () => {
                     </Link>
                 </div>
 
-                {/* Recent Invoices Table */}
+                {/* Recent Invoices Table (real data) */}
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                         <h3 className="font-bold text-sm">Recent Invoices</h3>
@@ -343,37 +314,78 @@ const ClientDashboard = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-gray-50/70">
-                                    <th className="px-5 py-3">Invoice #</th>
-                                    <th className="px-5 py-3">Billing Period</th>
-                                    <th className="px-5 py-3">Amount</th>
-                                    <th className="px-5 py-3">Status</th>
+                                    <th className="px-5 py-3 text-left">Invoice #</th>
+                                    <th className="px-5 py-3 text-left">Billing Period</th>
+                                    <th className="px-5 py-3 text-left">Amount</th>
+                                    <th className="px-5 py-3 text-left">Status</th>
                                     <th className="px-5 py-3 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {mockInvoices.map((inv) => (
-                                    <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors">
-                                        <td className="px-5 py-3.5 font-semibold text-sm text-gray-800">{inv.id}</td>
-                                        <td className="px-5 py-3.5 text-sm text-gray-500">{inv.period}</td>
-                                        <td className="px-5 py-3.5 text-sm font-semibold text-gray-800">
-                                            LKR {inv.amount.toLocaleString("en-LK", { minimumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="px-5 py-3.5">
-                                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${statusInvBadge(inv.status)}`}>
-                                                {inv.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3.5 text-right">
-                                            <button
-                                                onClick={() => navigate("/client/invoices")}
-                                                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                                                title="View"
-                                            >
-                                                <Download className="h-4 w-4 text-gray-400" />
-                                            </button>
+                                {invoicesLoading ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400">
+                                            Loading invoices…
                                         </td>
                                     </tr>
-                                ))}
+                                ) : invoicesErr ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-5 py-10 text-center text-sm text-red-500">
+                                            {invoicesErr}
+                                        </td>
+                                    </tr>
+                                ) : recentInvoices.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400">
+                                            No invoices available
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    recentInvoices.map((inv) => {
+                                        const period = `${MONTHS[(inv.billingMonth ?? 1) - 1]} ${inv.billingYear ?? ""}`;
+                                        const badge = (s: string) => {
+                                            const map: Record<string, string> = {
+                                                PAID:             "bg-emerald-100 text-emerald-700",
+                                                PENDING:          "bg-sky-100 text-sky-700",
+                                                ISSUED:           "bg-amber-100 text-amber-700",
+                                                OVERDUE:          "bg-red-100 text-red-700",
+                                                APPROVED:         "bg-indigo-100 text-indigo-700",
+                                                PAYMENT_UPLOADED: "bg-sky-100 text-sky-700",
+                                                PAYMENT_REJECTED: "bg-orange-100 text-orange-700",
+                                                WAIVED:           "bg-purple-100 text-purple-700",
+                                                DISPUTED:         "bg-yellow-100 text-yellow-700",
+                                                CANCELLED:        "bg-gray-200 text-gray-600",
+                                                DRAFT:            "bg-gray-100 text-gray-600",
+                                            };
+                                            return map[s] ?? "bg-gray-100 text-gray-600";
+                                        };
+                                        return (
+                                            <tr key={inv.invoiceId} className="hover:bg-gray-50/60 transition-colors">
+                                                <td className="px-5 py-3.5 font-semibold text-sm text-gray-800">
+                                                    {inv.invoiceNumber ?? `INV-${inv.invoiceId}`}
+                                                </td>
+                                                <td className="px-5 py-3.5 text-sm text-gray-500">{period}</td>
+                                                <td className="px-5 py-3.5 text-sm font-semibold text-gray-800">
+                                                    LKR {(inv.totalAmount ?? 0).toLocaleString("en-LK", { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-5 py-3.5">
+                                                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${badge(inv.status)}`}>
+                                                        {inv.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3.5 text-right">
+                                                    <button
+                                                        onClick={() => navigate(`/client/invoices/${inv.invoiceId}`)}
+                                                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        title="View"
+                                                    >
+                                                        <Download className="h-4 w-4 text-gray-400" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -381,7 +393,7 @@ const ClientDashboard = () => {
             </div>
 
             {/* ── Need Assistance Banner ── */}
-            <section className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-7 overflow-hidden">
+            <section className="relative rounded-2xl p-7 overflow-hidden" style={{ background: "linear-gradient(to right, #111827, #1f2937)" }}>
                 <div className="absolute -right-8 -bottom-8 h-40 w-40 rounded-full bg-white/5 pointer-events-none" />
                 <div className="absolute right-28 -top-8 h-28 w-28 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
                 <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">

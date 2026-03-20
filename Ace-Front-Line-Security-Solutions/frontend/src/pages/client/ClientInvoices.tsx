@@ -195,18 +195,18 @@ const ClientInvoices = () => {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead>
-                            <tr className="text-[11px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-50">
-                                <th className="px-6 py-3.5">Invoice #</th>
-                                <th className="px-6 py-3.5">Period</th>
-                                <th className="px-6 py-3.5">Issue Date</th>
-                                <th className="px-6 py-3.5">Due Date</th>
-                                <th className="px-6 py-3.5">Amount (LKR)</th>
-                                <th className="px-6 py-3.5">Status</th>
-                                <th className="px-6 py-3.5 text-right">Actions</th>
+                            <thead className="bg-gray-100 border-b-2 border-gray-200">
+                            <tr className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                                <th className="px-6 py-3 text-left">Invoice #</th>
+                                <th className="px-6 py-3 text-left">Period</th>
+                                <th className="px-6 py-3 text-left">Issue Date</th>
+                                <th className="px-6 py-3 text-left">Due Date</th>
+                                <th className="px-6 py-3 text-left">Amount (LKR)</th>
+                                <th className="px-6 py-3 text-left">Status</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-gray-100">
                             {paginated.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
@@ -218,40 +218,41 @@ const ClientInvoices = () => {
                                 const period = `${MONTHS[(inv.billingMonth ?? 1) - 1]} ${inv.billingYear ?? ""}`;
                                 return (
                                     <tr key={inv.invoiceId} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-3.5 font-semibold text-sm text-gray-900">
+                                        <td className="px-6 py-3 font-semibold text-sm text-gray-900">
                                             {inv.invoiceNumber ?? `INV-${inv.invoiceId}`}
                                         </td>
-                                        <td className="px-6 py-3.5 text-sm text-gray-600">{period}</td>
-                                        <td className="px-6 py-3.5 text-sm text-gray-600">
+                                        <td className="px-6 py-3 text-sm text-gray-600">{period}</td>
+                                        <td className="px-6 py-3 text-sm text-gray-600">
                                             {inv.issueDate ? new Date(inv.issueDate).toLocaleDateString("en-LK") : "—"}
                                         </td>
-                                        <td className={`px-6 py-3.5 text-sm font-medium ${inv.status === "OVERDUE" ? "text-red-600" : "text-gray-600"}`}>
+                                        <td className={`px-6 py-3 text-sm font-medium ${inv.status === "OVERDUE" ? "text-red-600" : "text-gray-600"}`}>
                                             {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-LK") : "—"}
                                         </td>
-                                        <td className="px-6 py-3.5 text-sm font-semibold text-gray-900">
+                                        <td className="px-6 py-3 text-sm font-semibold text-gray-900">
                                             {(inv.totalAmount ?? 0).toLocaleString("en-LK", { minimumFractionDigits: 2 })}
                                         </td>
-                                        <td className="px-6 py-3.5">
+                                        <td className="px-6 py-3">
                                             <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${statusBadge(inv.status)}`}>
                                                 {statusLabel(inv.status)}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-3.5">
+                                        <td className="px-6 py-3">
                                             <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     onClick={() => navigate(`/client/invoices/${inv.invoiceId}`)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                                                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
+                                                    title="View Details"
                                                 >
-                                                    <Eye className="h-3.5 w-3.5" /> Details
+                                                    <Eye className="h-3.5 w-3.5" />
                                                 </button>
                                                 {(inv.status === "ISSUED" || inv.status === "PAYMENT_REJECTED" || inv.status === "OVERDUE") && (
                                                     <button
                                                         onClick={() => navigate(`/client/invoices/${inv.invoiceId}/upload-proof`)}
-                                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all"
+                                                        className="flex items-center gap-1 px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
                                                         title="Upload Payment Proof"
                                                     >
-                                                        <CloudUpload className="h-3.5 w-3.5" />
-                                                        <span className="hidden sm:inline">Pay</span>
+                                                        <CloudUpload className="h-3 w-3" />
+                                                        Pay
                                                     </button>
                                                 )}
                                                 <button

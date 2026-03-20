@@ -41,6 +41,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/services/api";
 
 /* ───────────────────────────── types / helpers ────────────────────────────── */
 
@@ -169,6 +172,7 @@ const ClientManagement = () => {
   const [error, setError] = useState("");
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const { toast } = useToast();
 
   /* ── list state ── */
   const [search, setSearch] = useState("");
@@ -182,6 +186,22 @@ const ClientManagement = () => {
   const [form, setForm] = useState<RegisterForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+
+  const handleAction = async (action: string, successMessage: string) => {
+    try {
+      await api.post(`/v1/automation/${action}`);
+      toast({
+        title: "Success",
+        description: successMessage,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to ${action.replace(/-/g, " ")}.`,
+        variant: "destructive",
+      });
+    }
+  };
 
   /* ── data fetching ── */
   const fetchClients = async () => {
@@ -247,7 +267,7 @@ const ClientManagement = () => {
   }, [search, filterStatus, filterIndustry]);
 
   /* ── actions ── */
-  const handleAction = async (
+  const handleClientAction = async (
     clientId: number,
     action: "suspend" | "terminate" | "reactivate"
   ) => {
@@ -373,411 +393,412 @@ const ClientManagement = () => {
   /*                             LIST VIEW                                 */
   /* ═══════════════════════════════════════════════════════════════════════ */
 
-  const renderListView = () => {
-    const stats = [
-      {
-        label: "Total Clients",
-        value: total.toLocaleString(),
-        icon: Users,
-        trend: "12%",
-        up: true,
-        color: "",
-        bg: "bg-yellow-50",
-        iconBg: "bg-yellow-100",
-        iconColor: "text-yellow-600",
-      },
-      {
-        label: "Active Contracts",
-        value: active.toLocaleString(),
-        icon: CheckCircle,
-        trend: "5%",
-        up: true,
-        color: "text-emerald-600",
-        bg: "bg-emerald-50",
-        iconBg: "bg-emerald-100",
-        iconColor: "text-emerald-600",
-      },
-      {
-        label: "Suspended",
-        value: suspended.toString(),
-        icon: PauseCircle,
-        trend: "2%",
-        up: false,
-        color: "text-amber-600",
-        bg: "bg-orange-50",
-        iconBg: "bg-orange-100",
-        iconColor: "text-orange-600",
-      },
-      {
-        label: "Expiring Soon",
-        value: expiring.toString(),
-        icon: CalendarX,
-        trend: "8%",
-        up: true,
-        color: "text-rose-600",
-        bg: "bg-red-50",
-        iconBg: "bg-red-100",
-        iconColor: "text-red-600",
-      },
-    ];
+  const renderListView = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900">Client Management</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Onboard, view, and manage your corporate clients.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => handleAction("send-contract-reminders", "Contract reminders sent.")}>
+                <Mail className="h-4 w-4 mr-2" />
+                Send Contract Reminders
+            </Button>
+            <Button variant="outline" onClick={() => handleAction("handle-expired-contracts", "Expired contracts handled.")}>
+                <CalendarX className="h-4 w-4 mr-2" />
+                Handle Expired Contracts
+            </Button>
+            <Button onClick={() => setView("register")}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Register New Client
+            </Button>
+        </div>
+      </div>
 
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight">
-              Client Management
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage and monitor high-profile security service contracts
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Total Clients",
+            value: total.toLocaleString(),
+            icon: Users,
+            trend: "12%",
+            up: true,
+            color: "",
+            bg: "bg-yellow-50",
+            iconBg: "bg-yellow-100",
+            iconColor: "text-yellow-600",
+          },
+          {
+            label: "Active Contracts",
+            value: active.toLocaleString(),
+            icon: CheckCircle,
+            trend: "5%",
+            up: true,
+            color: "text-emerald-600",
+            bg: "bg-emerald-50",
+            iconBg: "bg-emerald-100",
+            iconColor: "text-emerald-600",
+          },
+          {
+            label: "Suspended",
+            value: suspended.toString(),
+            icon: PauseCircle,
+            trend: "2%",
+            up: false,
+            color: "text-amber-600",
+            bg: "bg-orange-50",
+            iconBg: "bg-orange-100",
+            iconColor: "text-orange-600",
+          },
+          {
+            label: "Expiring Soon",
+            value: expiring.toString(),
+            icon: CalendarX,
+            trend: "8%",
+            up: true,
+            color: "text-rose-600",
+            bg: "bg-red-50",
+            iconBg: "bg-red-100",
+            iconColor: "text-red-600",
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className={`${stat.bg} p-6 rounded-xl border shadow-sm`}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div
+                className={`p-2.5 ${stat.iconBg} rounded-lg`}
+              >
+                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+              </div>
+              <span
+                className={`text-sm font-bold flex items-center gap-0.5 ${
+                  stat.up ? "text-emerald-500" : "text-rose-500"
+                }`}
+              >
+                {stat.up ? (
+                  <TrendingUp className="h-4 w-4" />
+                ) : (
+                  <TrendingDown className="h-4 w-4" />
+                )}
+                ~{stat.trend}
+              </span>
+            </div>
+            <p className="text-muted-foreground text-sm font-medium">
+              {stat.label}
+            </p>
+            <p className={`text-3xl font-black mt-1 ${stat.color}`}>
+              {stat.value}
             </p>
           </div>
-          <button
-            onClick={goToRegister}
-            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-primary/20"
-          >
-            <PlusCircle className="h-5 w-5" />
-            Register New Client
-          </button>
-        </div>
+        ))}
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className={`${stat.bg} p-6 rounded-xl border shadow-sm`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div
-                  className={`p-2.5 ${stat.iconBg} rounded-lg`}
-                >
-                  <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                </div>
-                <span
-                  className={`text-sm font-bold flex items-center gap-0.5 ${
-                    stat.up ? "text-emerald-500" : "text-rose-500"
-                  }`}
-                >
-                  {stat.up ? (
-                    <TrendingUp className="h-4 w-4" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4" />
-                  )}
-                  ~{stat.trend}
-                </span>
-              </div>
-              <p className="text-muted-foreground text-sm font-medium">
-                {stat.label}
-              </p>
-              <p className={`text-3xl font-black mt-1 ${stat.color}`}>
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Filters Bar */}
-        <div className="bg-card p-4 rounded-xl border shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Status filter */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg border">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  Status:
-                </span>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="bg-transparent border-none p-0 text-sm font-medium focus:ring-0 cursor-pointer"
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="SUSPENDED">Suspended</option>
-                  <option value="TERMINATED">Terminated</option>
-                  <option value="EXPIRED">Expired</option>
-                  <option value="EXPIRING">Expiring Soon</option>
-                </select>
-              </div>
-
-              {/* Industry filter */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg border">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  Industry:
-                </span>
-                <select
-                  value={filterIndustry}
-                  onChange={(e) => setFilterIndustry(e.target.value)}
-                  className="bg-transparent border-none p-0 text-sm font-medium focus:ring-0 cursor-pointer"
-                >
-                  <option value="ALL">All Industries</option>
-                  {industries.map((ind) => (
-                    <option key={ind} value={ind}>
-                      {ind}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Search */}
-              <div className="flex items-center bg-muted rounded-lg border px-3 py-1.5">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <input
-                  className="bg-transparent border-none focus:ring-0 text-sm w-48 placeholder:text-muted-foreground ml-2 outline-none"
-                  placeholder="Search clients..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors border">
-                <Download className="h-5 w-5" />
-              </button>
-              <button
-                onClick={fetchClients}
-                className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors border"
-                title="Refresh"
+      {/* Filters Bar */}
+      <div className="bg-card p-4 rounded-xl border shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Status filter */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg border">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Status:
+              </span>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="bg-transparent border-none p-0 text-sm font-medium focus:ring-0 cursor-pointer"
               >
-                <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
-              </button>
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">Active</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="TERMINATED">Terminated</option>
+                <option value="EXPIRED">Expired</option>
+                <option value="EXPIRING">Expiring Soon</option>
+              </select>
             </div>
+
+            {/* Industry filter */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg border">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Industry:
+              </span>
+              <select
+                value={filterIndustry}
+                onChange={(e) => setFilterIndustry(e.target.value)}
+                className="bg-transparent border-none p-0 text-sm font-medium focus:ring-0 cursor-pointer"
+              >
+                <option value="ALL">All Industries</option>
+                {industries.map((ind) => (
+                  <option key={ind} value={ind}>
+                    {ind}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="flex items-center bg-muted rounded-lg border px-3 py-1.5">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                className="bg-transparent border-none focus:ring-0 text-sm w-48 placeholder:text-muted-foreground ml-2 outline-none"
+                placeholder="Search clients..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors border">
+              <Download className="h-5 w-5" />
+            </button>
+            <button
+              onClick={fetchClients}
+              className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors border"
+              title="Refresh"
+            >
+              <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Error */}
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error}
+      {/* Error */}
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 text-sm flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="text-center py-20">
+            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground font-medium">Loading clients...</p>
           </div>
-        )}
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">
+            <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-semibold">
+              {search || filterStatus !== "ALL" || filterIndustry !== "ALL"
+                ? "No clients match your filters."
+                : "No clients yet. Register your first client!"}
+            </p>
+            {!search && filterStatus === "ALL" && filterIndustry === "ALL" && (
+              <button
+                onClick={goToRegister}
+                className="mt-4 text-primary font-bold hover:underline"
+              >
+                + Register New Client
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Client Code
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Company Name
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Contact Person
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Service End Date
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-right">
+                      Balance
+                    </th>
+                    <th className="px-6 py-4 text-center">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {paginated.map((client) => {
+                    const displayStatus = getDisplayStatus(client);
+                    const isExpiring = displayStatus === "EXPIRING";
+                    const endDateColor = isExpiring ? "text-red-600 font-bold" : "";
+                    const balanceColor =
+                      (client.totalOutstanding ?? 0) > 0 &&
+                      client.status !== "ACTIVE"
+                        ? "text-destructive"
+                        : (client.totalOutstanding ?? 0) > 0
+                        ? "text-amber-600"
+                        : "";
 
-        {/* Table */}
-        <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="text-center py-20">
-              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">Loading clients...</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-semibold">
-                {search || filterStatus !== "ALL" || filterIndustry !== "ALL"
-                  ? "No clients match your filters."
-                  : "No clients yet. Register your first client!"}
-              </p>
-              {!search && filterStatus === "ALL" && filterIndustry === "ALL" && (
-                <button
-                  onClick={goToRegister}
-                  className="mt-4 text-primary font-bold hover:underline"
-                >
-                  + Register New Client
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-muted/50 border-b">
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Client Code
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Company Name
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Contact Person
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Service End Date
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">
-                        Balance
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {paginated.map((client) => {
-                      const displayStatus = getDisplayStatus(client);
-                      const isExpiring = displayStatus === "EXPIRING";
-                      const endDateColor = isExpiring ? "text-red-600 font-bold" : "";
-                      const balanceColor =
-                        (client.totalOutstanding ?? 0) > 0 &&
-                        client.status !== "ACTIVE"
-                          ? "text-destructive"
-                          : (client.totalOutstanding ?? 0) > 0
-                          ? "text-amber-600"
-                          : "";
-
-                      return (
-                        <tr
-                          key={client.clientId}
-                          className="hover:bg-muted/30 transition-colors"
-                        >
-                          <td className="px-6 py-4 font-mono text-sm text-muted-foreground">
-                            #{client.clientCode || `AF-${client.clientId}`}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-md bg-primary/80 flex items-center justify-center font-bold text-xs text-primary-foreground shrink-0">
-                                {getInitials(client.companyName)}
-                              </div>
-                              <span className="font-bold text-sm">
-                                {client.companyName}
-                              </span>
+                    return (
+                      <tr
+                        key={client.clientId}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-6 py-4 font-mono text-sm text-muted-foreground">
+                          #{client.clientCode || `AF-${client.clientId}`}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-md bg-primary/80 flex items-center justify-center font-bold text-xs text-primary-foreground shrink-0">
+                              {getInitials(client.companyName)}
                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-semibold">
-                              {client.contactPersonName}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {client.contactPersonEmail}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${statusBadge(
-                                displayStatus
-                              )}`}
-                            >
-                              {displayStatus}
+                            <span className="font-bold text-sm">
+                              {client.companyName}
                             </span>
-                          </td>
-                          <td
-                            className={`px-6 py-4 text-sm font-medium ${endDateColor}`}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-semibold">
+                            {client.contactPersonName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {client.contactPersonEmail}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${statusBadge(
+                              displayStatus
+                            )}`}
                           >
-                            {formatDate(client.contractEndDate)}
-                          </td>
-                          <td
-                            className={`px-6 py-4 text-sm font-bold text-right ${balanceColor}`}
-                          >
-                            {formatCurrency(client.totalOutstanding)}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  className="p-1 hover:bg-muted rounded transition-colors"
-                                  disabled={
-                                    actionLoading === client.clientId
-                                  }
-                                >
-                                  <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedClient(client);
-                                    setView("detail");
-                                  }}
-                                >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {client.status === "ACTIVE" && (
-                                  <>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleAction(
-                                          client.clientId,
-                                          "suspend"
-                                        )
-                                      }
-                                    >
-                                      <Ban className="h-4 w-4 mr-2" />
-                                      Suspend Client
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="text-destructive focus:text-destructive"
-                                      onClick={() =>
-                                        handleAction(
-                                          client.clientId,
-                                          "terminate"
-                                        )
-                                      }
-                                    >
-                                      <XCircle className="h-4 w-4 mr-2" />
-                                      Terminate Client
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                                {(client.status === "SUSPENDED" ||
-                                  client.status === "TERMINATED") && (
+                            {displayStatus}
+                          </span>
+                        </td>
+                        <td
+                          className={`px-6 py-4 text-sm font-medium ${endDateColor}`}
+                        >
+                          {formatDate(client.contractEndDate)}
+                        </td>
+                        <td
+                          className={`px-6 py-4 text-sm font-bold text-right ${balanceColor}`}
+                        >
+                          {formatCurrency(client.totalOutstanding)}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="p-1 hover:bg-muted rounded transition-colors"
+                                disabled={
+                                  actionLoading === client.clientId
+                                }
+                              >
+                                <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedClient(client);
+                                  setView("detail");
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {client.status === "ACTIVE" && (
+                                <>
                                   <DropdownMenuItem
                                     onClick={() =>
-                                      handleAction(
+                                      handleClientAction(
                                         client.clientId,
-                                        "reactivate"
+                                        "suspend"
                                       )
                                     }
                                   >
-                                    <RotateCcw className="h-4 w-4 mr-2" />
-                                    Reactivate Client
+                                    <Ban className="h-4 w-4 mr-2" />
+                                    Suspend Client
                                   </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() =>
+                                      handleClientAction(
+                                        client.clientId,
+                                        "terminate"
+                                      )
+                                    }
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Terminate Client
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {(client.status === "SUSPENDED" ||
+                                client.status === "TERMINATED") && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleClientAction(
+                                      client.clientId,
+                                      "reactivate"
+                                    )
+                                  }
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Reactivate Client
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Pagination */}
-              <div className="px-6 py-4 bg-muted/30 flex items-center justify-between border-t">
-                <p className="text-sm text-muted-foreground">
-                  Showing{" "}
-                  <span className="font-bold text-foreground">
-                    {(page - 1) * ROWS_PER_PAGE + 1} to{" "}
-                    {Math.min(page * ROWS_PER_PAGE, filtered.length)}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-bold text-foreground">
-                    {filtered.length.toLocaleString()}
-                  </span>{" "}
-                  clients
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    className="px-3 py-1.5 rounded-lg border text-sm font-medium hover:bg-card transition-colors disabled:opacity-50 flex items-center gap-1"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </button>
-                  <button
-                    className="px-3 py-1.5 rounded-lg border text-sm font-medium hover:bg-card transition-colors disabled:opacity-50 flex items-center gap-1"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+            {/* Pagination */}
+            <div className="px-6 py-4 bg-muted/30 flex items-center justify-between border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing{" "}
+                <span className="font-bold text-foreground">
+                  {(page - 1) * ROWS_PER_PAGE + 1} to{" "}
+                  {Math.min(page * ROWS_PER_PAGE, filtered.length)}
+                </span>{" "}
+                of{" "}
+                <span className="font-bold text-foreground">
+                  {filtered.length.toLocaleString()}
+                </span>{" "}
+                clients
+              </p>
+              <div className="flex gap-2">
+                <button
+                  className="px-3 py-1.5 rounded-lg border text-sm font-medium hover:bg-card transition-colors disabled:opacity-50 flex items-center gap-1"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded-lg border text-sm font-medium hover:bg-card transition-colors disabled:opacity-50 flex items-center gap-1"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   /*                         REGISTRATION VIEW                             */
@@ -1228,18 +1249,14 @@ const ClientManagement = () => {
         <div className="rounded-2xl border bg-card shadow-lg overflow-hidden">
 
           {/* Hero success banner */}
-          <div className="bg-gradient-to-br from-primary to-primary/80 px-8 py-8 text-primary-foreground text-center relative overflow-hidden">
-            <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
-            <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full bg-white/10" />
-            <div className="relative">
-              <div className="w-16 h-16 bg-white/20 border-4 border-white/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="h-9 w-9 text-white" />
-              </div>
-              <h2 className="text-2xl font-black tracking-tight">Client Registered!</h2>
-              <p className="text-primary-foreground/80 text-sm mt-1">
-                <strong>{successData.companyName}</strong> has been onboarded successfully
-              </p>
+          <div className="px-8 py-10 text-center border-b border-gray-100">
+            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
             </div>
+            <h2 className="text-2xl font-black tracking-tight text-gray-900">Registration Successful!</h2>
+            <p className="text-gray-500 text-sm mt-1">
+              <strong className="text-gray-700">{successData.companyName}</strong> has been onboarded successfully
+            </p>
           </div>
 
           {/* Credentials section */}
@@ -1579,13 +1596,13 @@ const ClientManagement = () => {
           {c.status === "ACTIVE" && (
             <>
               <button
-                onClick={() => handleAction(c.clientId, "suspend")}
+                onClick={() => handleClientAction(c.clientId, "suspend")}
                 className="px-4 py-2 rounded-lg border text-sm font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-2"
               >
                 <Ban className="h-4 w-4" /> Suspend
               </button>
               <button
-                onClick={() => handleAction(c.clientId, "terminate")}
+                onClick={() => handleClientAction(c.clientId, "terminate")}
                 className="px-4 py-2 rounded-lg border text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-2"
               >
                 <XCircle className="h-4 w-4" /> Terminate
@@ -1594,7 +1611,7 @@ const ClientManagement = () => {
           )}
           {(c.status === "SUSPENDED" || c.status === "TERMINATED") && (
             <button
-              onClick={() => handleAction(c.clientId, "reactivate")}
+              onClick={() => handleClientAction(c.clientId, "reactivate")}
               className="px-4 py-2 rounded-lg border text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-2"
             >
               <RotateCcw className="h-4 w-4" /> Reactivate

@@ -131,7 +131,7 @@ const AccountantInvoiceQueue = () => {
             {/* ── Page header ── */}
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold">Invoice Review Queue – {periodLabel}</h2>
+                    <h2 className="text-2xl font-black">Invoice Review Queue – {periodLabel}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
                         Verify and process monthly billing for the current period.
                     </p>
