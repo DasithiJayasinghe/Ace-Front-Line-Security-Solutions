@@ -238,27 +238,6 @@ public class EmailService {
                 subject, body, EmailType.PAYMENT_REJECTED, payment.getPaymentId());
     }
 
-    // ── Feedback Approved ─────────────────────────────────────────────────────
-
-    @Transactional
-    public void sendFeedbackApprovedEmail(Client client) {
-        String subject = "Your Testimonial is Now Published — Thank You!";
-
-        String body = buildHeader()
-                + "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:16px;'>"
-                + "<tr><td align='center' style='padding-bottom:16px;'>"
-                + "<div style='font-size:52px;'>&#11088;</div>"
-                + "</td></tr></table>"
-                + sectionTitle("Your Feedback Has Been Published!")
-                + para("Dear <strong>" + esc(client.getContactPersonName())
-                + "</strong>, thank you for taking the time to share your experience with us.")
-                + para("Your testimonial is now <strong>live on our homepage</strong>. We truly value your feedback — it helps us continuously improve our services and motivates our team.")
-                + cta("View Our Homepage", portalUrl)
-                + buildFooter();
-
-        sendAndLog(client.getContactPersonEmail(), client.getContactPersonName(),
-                subject, body, EmailType.FEEDBACK_APPROVED, client.getClientId());
-    }
 
     // ── Contract Renewal Reminder (60 / 30 / 7 days) ─────────────────────────
 

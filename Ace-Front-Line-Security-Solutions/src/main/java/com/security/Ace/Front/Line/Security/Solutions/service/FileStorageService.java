@@ -43,7 +43,7 @@ public class FileStorageService {
 
             // Generate unique filename
             String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String newFilename = UUID.randomUUID().toString() + fileExtension;
+            String newFilename = UUID.randomUUID() + fileExtension;
 
             // Create subfolder if needed
             Path targetLocation = this.fileStorageLocation.resolve(subFolder);
@@ -80,7 +80,7 @@ public class FileStorageService {
             Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
             Files.deleteIfExists(filePath);
         } catch (IOException ex) {
-            log.error("Could not delete file: " + fileName, ex);
+            log.error("Could not delete file: {}", fileName, ex);
         }
     }
 }
