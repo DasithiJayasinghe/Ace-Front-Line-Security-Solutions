@@ -29,9 +29,9 @@ import ChairmanDashboard from "./pages/ChairmanDashboard";
 import LoanApproval from "./pages/LoanApproval";
 import LoanDeductions from "./pages/LoanDeduction";
 import DeductionSchedule from "./pages/DeductionSchedule";
-import admin_PayrollPage from "./pages/admin_PayrollPage";
-import admin_PayrollApprovalPage from "./pages/admin_PayrollApprovalPage";
-import admin_PayrollListPage from "./pages/admin_PayrollListPage";
+import AdminPayrollPage from "./pages/admin_PayrollPage";
+import AdminPayrollApprovalPage from "./pages/admin_PayrollApprovalPage";
+import AdminPayrollListPage from "./pages/admin_PayrollListPage";
 
 const queryClient = new QueryClient();
 
@@ -77,9 +77,9 @@ const App = () => (
             <Route path="/change-password" element={<ProtectedRoute requiredRoles={[]}><ChangePasswordPage /></ProtectedRoute>} />
 
             {/* Payroll Routes */}
-            <Route path="/account-executive/payroll/create" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE']}><admin_PayrollPage /></ProtectedRoute>} />
-            <Route path="/account-executive/payroll/bank-submission" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE']}><admin_PayrollListPage /></ProtectedRoute>} />
-            <Route path="/director/payroll/approvals" element={<ProtectedRoute requiredRoles={['DIRECTOR']}><admin_PayrollApprovalPage /></ProtectedRoute>} />
+            <Route path="/account-executive/payroll/create" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE']}><AdminPayrollPage /></ProtectedRoute>} />
+            <Route path="/account-executive/payroll/bank-submission" element={<ProtectedRoute requiredRoles={['ACCOUNT_EXECUTIVE']}><AdminPayrollListPage /></ProtectedRoute>} />
+            <Route path="/director/payroll/approvals" element={<ProtectedRoute requiredRoles={['DIRECTOR']}><AdminPayrollApprovalPage /></ProtectedRoute>} />
 
             {/* Protected Area Manager Dashboard */}
             <Route path="/area-manager/*" element={<ProtectedRoute requiredRoles={['AREA_MANAGER']}><AreaManagerDashboard /></ProtectedRoute>} />

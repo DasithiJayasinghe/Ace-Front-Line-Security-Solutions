@@ -49,29 +49,32 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
         return;
       }
 
+      // For all roles, always send email
+      const isSimplifiedRole = selectedRole === "CHAIRMAN" || selectedRole === "DIRECTOR";
+
       const data = {
         username: get("username"),
         password: get("password"),
         role: selectedRole,
         fullName: get("fullName"),
-        nicNumber: get("nicNumber"),
-        sex: selectedSex || undefined,
+        nicNumber: isSimplifiedRole ? undefined : get("nicNumber"),
+        sex: isSimplifiedRole ? undefined : (selectedSex || undefined),
         email: get("email"),
-        mobileNumber: get("mobileNumber"),
-        dateOfBirth: get("dateOfBirth") || undefined,
-        emergencyContact: get("emergencyContact") || undefined,
-        emergencyContactPersonName: get("emergencyContactPersonName") || undefined,
-        bloodGroup: selectedBloodGroup || undefined,
-        residentialAddress: get("residentialAddress") || undefined,
-        basicSalary: get("basicSalary") ? Number(get("basicSalary")) : undefined,
+        mobileNumber: isSimplifiedRole ? undefined : get("mobileNumber"),
+        dateOfBirth: isSimplifiedRole ? undefined : (get("dateOfBirth") || undefined),
+        emergencyContact: isSimplifiedRole ? undefined : (get("emergencyContact") || undefined),
+        emergencyContactPersonName: isSimplifiedRole ? undefined : (get("emergencyContactPersonName") || undefined),
+        bloodGroup: isSimplifiedRole ? undefined : (selectedBloodGroup || undefined),
+        residentialAddress: isSimplifiedRole ? undefined : (get("residentialAddress") || undefined),
+        basicSalary: isSimplifiedRole ? undefined : (get("basicSalary") ? Number(get("basicSalary")) : undefined),
         assignedArea: selectedRole === "AREA_MANAGER" ? assignedArea.trim() : undefined,
-        adminPosition: get("adminPosition") || undefined,
-        professionalCertificate: get("professionalCertificate") || undefined,
-        joinDate: get("joinDate") || undefined,
-        specialSkills: get("specialSkills") || undefined,
-        bankName: get("bankName") || undefined,
-        bankAccountNumber: get("bankAccountNumber") || undefined,
-        bankBranch: get("bankBranch") || undefined,
+        adminPosition: isSimplifiedRole ? undefined : (get("adminPosition") || undefined),
+        professionalCertificate: isSimplifiedRole ? undefined : (get("professionalCertificate") || undefined),
+        joinDate: isSimplifiedRole ? undefined : (get("joinDate") || undefined),
+        specialSkills: isSimplifiedRole ? undefined : (get("specialSkills") || undefined),
+        bankName: isSimplifiedRole ? undefined : (get("bankName") || undefined),
+        bankAccountNumber: isSimplifiedRole ? undefined : (get("bankAccountNumber") || undefined),
+        bankBranch: isSimplifiedRole ? undefined : (get("bankBranch") || undefined),
       };
 
       await authService.registerUser(data, photo || undefined);
@@ -83,55 +86,54 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
       setPhoto(null);
       setAssignedArea("");
     } catch (err: any) {
-      // Try to parse field-specific errors from the response
-      const errorMessage = err.message || "Registration failed";
+      // Prefer structured field errors from API (via authService)
       const errors: FieldErrors = {};
-      
-      // Extract field errors from error message if available
-      // Format: "Field validation errors: field1: error1, field2: error2"
-      if (errorMessage.includes("Field validation errors:") || errorMessage.includes("validation errors")) {
-        const match = errorMessage.match(/(?:Field\s+)?validation errors:?\s*(.*)/i);
-        if (match) {
-          const errorStr = match[1];
-          // Try to parse field-specific errors
-          const fieldPairs = errorStr.split(/[,;]/);
-          fieldPairs.forEach(pair => {
-            const [field, ...messageParts] = pair.trim().split(":");
-            if (field && messageParts.length > 0) {
-              errors[field.trim()] = messageParts.join(":").trim();
-            }
-          });
-        }
+      if (err?.fieldErrors && typeof err.fieldErrors === "object") {
+        Object.assign(errors, err.fieldErrors);
       }
-      
-      // Common field mapping from backend validation
-      const errorMappings: Record<string, string[]> = {
-        username: ["username", "user", "login"],
-        password: ["password", "pwd"],
-        email: ["email", "mail"],
-        fullName: ["fullname", "name", "full_name"],
-        nicNumber: ["nic", "nicer", "ic_number"],
-        mobileNumber: ["mobile", "phone", "contact"],
-        emergencyContact: ["emergency"],
-      };
-      
-      // If no structured errors found, try to identify field from error message
+
+      // Fallback text error parsing
+      const errorMessage = err.message || "Registration failed";
       if (Object.keys(errors).length === 0) {
-        let identified = false;
-        for (const [field, keywords] of Object.entries(errorMappings)) {
-          if (keywords.some(kw => errorMessage.toLowerCase().includes(kw))) {
-            errors[field] = errorMessage;
-            identified = true;
-            break;
+        // Parse validation message text (legacy support)
+        if (errorMessage.includes("Field validation errors:") || errorMessage.includes("validation errors")) {
+          const match = errorMessage.match(/(?:Field\s+)?validation errors:?\s*(.*)/i);
+          if (match) {
+            const errorStr = match[1];
+            const fieldPairs = errorStr.split(/[,;]/);
+            fieldPairs.forEach(pair => {
+              const [field, ...messageParts] = pair.trim().split(":");
+              if (field && messageParts.length > 0) {
+                errors[field.trim()] = messageParts.join(":").trim();
+              }
+            });
           }
         }
-        
-        // If still no field identified, use generic error
-        if (!identified) {
-          errors["general"] = errorMessage;
+
+        if (Object.keys(errors).length === 0) {
+          const errorMappings: Record<string, string[]> = {
+            username: ["username", "user", "login"],
+            password: ["password", "pwd"],
+            email: ["email", "mail"],
+            fullName: ["fullname", "name", "full_name"],
+            nicNumber: ["nic", "nicer", "ic_number"],
+            mobileNumber: ["mobile", "phone", "contact"],
+            emergencyContact: ["emergency"],
+          };
+          let identified = false;
+          for (const [field, keywords] of Object.entries(errorMappings)) {
+            if (keywords.some(kw => errorMessage.toLowerCase().includes(kw))) {
+              errors[field] = errorMessage;
+              identified = true;
+              break;
+            }
+          }
+          if (!identified) {
+            errors.general = errorMessage;
+          }
         }
       }
-      
+
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
         const errorMessages = Object.values(errors).join("\n");
@@ -179,6 +181,7 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Username" name="username" required error={fieldErrors.username} />
             <Field label="Password" name="password" type="password" required error={fieldErrors.password} />
+            <Field label="Full Name" name="fullName" required error={fieldErrors.fullName} />
             <div className="space-y-2">
               <Label>Role <span className="text-destructive">*</span></Label>
               <Select required value={selectedRole} onValueChange={setSelectedRole}>
@@ -211,47 +214,63 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
         {/* Personal Information */}
         <Section title="Personal Information">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Full Name" name="fullName" required error={fieldErrors.fullName} />
-            <Field label="NIC Number" name="nicNumber" required error={fieldErrors.nicNumber} />
-            <div className="space-y-2">
-              <Label>Sex <span className="text-destructive">*</span></Label>
-              <Select required value={selectedSex} onValueChange={setSelectedSex}>
-                <SelectTrigger className={fieldErrors.sex ? "border-destructive" : ""}><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  {Object.values(Sex).map((s) => (
-                    <SelectItem key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fieldErrors.sex && <p className="text-xs text-destructive">{fieldErrors.sex}</p>}
-            </div>
+            {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
+              <Field label="NIC Number" name="nicNumber" required error={fieldErrors.nicNumber} />
+            )}
+            {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" ? (
+              <div className="space-y-2">
+                <Label>Sex <span className="text-destructive">*</span></Label>
+                <Select required value={selectedSex} onValueChange={setSelectedSex}>
+                  <SelectTrigger className={fieldErrors.sex ? "border-destructive" : ""}><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(Sex).map((s) => (
+                      <SelectItem key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldErrors.sex && <p className="text-xs text-destructive">{fieldErrors.sex}</p>}
+              </div>
+            ) : null}
             <Field label="Email" name="email" type="email" required error={fieldErrors.email} />
-            <Field label="Mobile Number" name="mobileNumber" required error={fieldErrors.mobileNumber} />
-            <Field label="Date of Birth" name="dateOfBirth" type="date" required error={fieldErrors.dateOfBirth} />
-            <div className="space-y-2">
-              <Label>Blood Group</Label>
-              <Select value={selectedBloodGroup} onValueChange={setSelectedBloodGroup}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select blood group" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bg) => (
-                    <SelectItem key={bg} value={bg}>{bg}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
+              <Field label="Mobile Number" name="mobileNumber" required error={fieldErrors.mobileNumber} />
+            )}
+            {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
+              <Field label="Date of Birth" name="dateOfBirth" type="date" required error={fieldErrors.dateOfBirth} />
+            )}
+            {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" ? (
+              <div className="space-y-2">
+                <Label>Blood Group</Label>
+                <Select value={selectedBloodGroup} onValueChange={setSelectedBloodGroup}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select blood group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bg) => (
+                      <SelectItem key={bg} value={bg}>{bg}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+            {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
+              <Field label="Emergency Contact Number" name="emergencyContact" required error={fieldErrors.emergencyContact} />
+            )}
+            {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
+              <Field label="Emergency Contact Person Name" name="emergencyContactPersonName" required error={fieldErrors.emergencyContactPersonName} />
+            )}
+          </div>
+          {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" ? (
+            <div className="mt-4 space-y-2">
+              <Label>Residential Address <span className="text-destructive">*</span></Label>
+              <Textarea name="residentialAddress" className={`mt-2 ${fieldErrors.residentialAddress ? "border-destructive" : ""}`} required />
+              {fieldErrors.residentialAddress && <p className="text-xs text-destructive">{fieldErrors.residentialAddress}</p>}
             </div>
-            <Field label="Emergency Contact Number" name="emergencyContact" required error={fieldErrors.emergencyContact} />
-            <Field label="Emergency Contact Person Name" name="emergencyContactPersonName" required error={fieldErrors.emergencyContactPersonName} />
-          </div>
-          <div className="mt-4 space-y-2">
-            <Label>Residential Address <span className="text-destructive">*</span></Label>
-            <Textarea name="residentialAddress" className={`mt-2 ${fieldErrors.residentialAddress ? "border-destructive" : ""}`} required />
-            {fieldErrors.residentialAddress && <p className="text-xs text-destructive">{fieldErrors.residentialAddress}</p>}
-          </div>
+          ) : null}
         </Section>
 
         {/* Professional Details */}
+        {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
         <Section title="Professional Details">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Admin Position" name="adminPosition" error={fieldErrors.adminPosition} />
@@ -261,8 +280,10 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
             <Field label="Special Skills" name="specialSkills" error={fieldErrors.specialSkills} />
           </div>
         </Section>
+        )}
 
         {/* Bank Details */}
+        {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
         <Section title="Bank Details">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Bank Name" name="bankName" error={fieldErrors.bankName} />
@@ -270,15 +291,18 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
             <Field label="Branch" name="bankBranch" error={fieldErrors.bankBranch} />
           </div>
         </Section>
+        )}
 
         {/* Photo Upload */}
+        {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
         <Section title="Photo">
           <Input type="file" accept="image/*" className="max-w-sm" onChange={(e) => setPhoto(e.target.files?.[0] || null)} />
         </Section>
+        )}
 
         <div className="flex gap-3">
           <Button type="submit" disabled={loading} className="px-8">
-            {loading ? "Registering..." : "Register Admin"}
+            {loading ? "Registering..." : `Register ${selectedRole ? selectedRole.replace(/_/g, " ") : "Admin"}`}
           </Button>
           <Button type="reset" variant="outline">Reset</Button>
         </div>

@@ -13,18 +13,14 @@ import { notificationService } from "@/services/notificationService";
 import { addNotification } from "@/lib/notifications";
 import DashboardHeader from "@/components/DashboardHeader";
 import ProfilePage from "@/pages/ProfilePage";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 
 export default function ExecutiveOfficerDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuthenticatedUser();
   const isProfile = location.pathname.endsWith("/profile");
-
-  // get user data
-  const user =
-    localStorage.getItem("user")
-      ? JSON.parse(localStorage.getItem("user")!)
-      : { fullName: "Executive Officer", username: "executive_officer", userId: 0, role: "EXECUTIVE_OFFICER" };
 
   // new states
   // make sure every loan in the array has a defined `user`

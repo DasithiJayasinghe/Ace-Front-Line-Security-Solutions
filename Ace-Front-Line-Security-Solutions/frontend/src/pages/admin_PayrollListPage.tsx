@@ -112,12 +112,32 @@ export default function admin_PayrollListPage() {
               <p className="text-muted-foreground">Send approved payrolls to bank for processing</p>
             </div>
           </div>
-          <div className="text-right">
-            <Badge className="text-lg px-3 py-1 bg-primary/20 text-primary border-primary/50">
-              {filteredPayrolls.length} Ready
-            </Badge>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <Badge className="text-lg px-3 py-1 bg-primary/20 text-primary border-primary/50">
+                {filteredPayrolls.length} Ready
+              </Badge>
+              <Button 
+                onClick={async () => {
+                   try {
+                     setLoading(true);
+                     await admin_payrollService.proceedAllToBank();
+                     toast.success("All payrolls processed and Excel downloaded");
+                     fetchApprovedPayrolls();
+                   } catch (error: any) {
+                     toast.error(error.message || "Failed to process bank submission");
+                   } finally {
+                     setLoading(false);
+                   }
+                }}
+                disabled={loading || filteredPayrolls.length === 0}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 shadow-md transition-all active:scale-95"
+              >
+                Proceed All to Bank
+              </Button>
+            </div>
             {filteredPayrolls.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground">
                 Total: {formatCurrency(totalPayroll)}
               </p>
             )}

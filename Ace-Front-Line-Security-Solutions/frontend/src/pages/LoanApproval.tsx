@@ -15,11 +15,13 @@ import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/DashboardHeader";
 import { getUserRole } from "@/lib/roleUtils";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 
 type TabType = "pending" | "approved" | "rejected";
 
 const LoanApproval = () => {
   const navigate = useNavigate();
+  const { user } = useAuthenticatedUser();
   const [activeTab, setActiveTab] = useState<TabType>("pending");
   const [pendingLoans, setPendingLoans] = useState<LoanRequest[]>([]);
   const [approvedLoans, setApprovedLoans] = useState<LoanRequest[]>([]);
@@ -30,9 +32,6 @@ const LoanApproval = () => {
   const [rejectingLoanId, setRejectingLoanId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
-
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : { fullName: "Executive Officer", username: "executive_officer", userId: 0, role: "EXECUTIVE_OFFICER" };
   const userRole = getUserRole();
   const canViewAllLoans = ["DIRECTOR", "CHAIRMAN", "OPERATION_MANAGER", "ACCOUNT_EXECUTIVE"].includes(userRole);
 
@@ -165,10 +164,10 @@ const LoanApproval = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader
-        userName={user.fullName}
+        userName={user?.fullName || "Executive Officer"}
         userRole="Executive Officer"
         onLogout={handleLogout}
-        userId={user.userId || user.id || 0}
+        userId={user?.userId || 0}
         backendRole="EXECUTIVE_OFFICER"
         profilePath="/executive-officer/profile"
       />

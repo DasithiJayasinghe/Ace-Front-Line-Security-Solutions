@@ -103,53 +103,51 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
       setSelectedEquipment([]);
       setPhoto(null);
     } catch (err: any) {
-      // Try to parse field-specific errors from the response
-      const errorMessage = err.message || "Registration failed";
       const errors: FieldErrors = {};
-      
-      // Extract field errors from error message if available
-      if (errorMessage.includes("Field validation errors:") || errorMessage.includes("validation errors")) {
-        const match = errorMessage.match(/(?:Field\s+)?validation errors:?\s*(.*)/i);
-        if (match) {
-          const errorStr = match[1];
-          const fieldPairs = errorStr.split(/[,;]/);
-          fieldPairs.forEach(pair => {
-            const [field, ...messageParts] = pair.trim().split(":");
-            if (field && messageParts.length > 0) {
-              errors[field.trim()] = messageParts.join(":").trim();
-            }
-          });
-        }
+      if (err?.fieldErrors && typeof err.fieldErrors === "object") {
+        Object.assign(errors, err.fieldErrors);
       }
-      
-      // Common field mapping from backend validation
-      const errorMappings: Record<string, string[]> = {
-        username: ["username", "user", "login"],
-        password: ["password", "pwd"],
-        email: ["email", "mail"],
-        fullName: ["fullname", "name", "full_name"],
-        nicNumber: ["nic", "nicer", "ic_number"],
-        mobileNumber: ["mobile", "phone", "contact"],
-        emergencyContact: ["emergency"],
-      };
-      
-      // If no structured errors found, try to identify field from error message
+
+      const errorMessage = err.message || "Registration failed";
       if (Object.keys(errors).length === 0) {
-        let identified = false;
-        for (const [field, keywords] of Object.entries(errorMappings)) {
-          if (keywords.some(kw => errorMessage.toLowerCase().includes(kw))) {
-            errors[field] = errorMessage;
-            identified = true;
-            break;
+        if (errorMessage.includes("Field validation errors:") || errorMessage.includes("validation errors")) {
+          const match = errorMessage.match(/(?:Field\s+)?validation errors:?\s*(.*)/i);
+          if (match) {
+            const errorStr = match[1];
+            const fieldPairs = errorStr.split(/[,;]/);
+            fieldPairs.forEach(pair => {
+              const [field, ...messageParts] = pair.trim().split(":");
+              if (field && messageParts.length > 0) {
+                errors[field.trim()] = messageParts.join(":").trim();
+              }
+            });
           }
         }
-        
-        // If still no field identified, use generic error
-        if (!identified) {
-          errors["general"] = errorMessage;
+
+        if (Object.keys(errors).length === 0) {
+          const errorMappings: Record<string, string[]> = {
+            username: ["username", "user", "login"],
+            password: ["password", "pwd"],
+            email: ["email", "mail"],
+            fullName: ["fullname", "name", "full_name"],
+            nicNumber: ["nic", "nicer", "ic_number"],
+            mobileNumber: ["mobile", "phone", "contact"],
+            emergencyContact: ["emergency"],
+          };
+          let identified = false;
+          for (const [field, keywords] of Object.entries(errorMappings)) {
+            if (keywords.some(kw => errorMessage.toLowerCase().includes(kw))) {
+              errors[field] = errorMessage;
+              identified = true;
+              break;
+            }
+          }
+          if (!identified) {
+            errors.general = errorMessage;
+          }
         }
       }
-      
+
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
         const errorMessages = Object.values(errors).join("\n");

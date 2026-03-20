@@ -6,6 +6,8 @@ import DashboardHeader from "@/components/DashboardHeader";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminRegistration from "@/pages/AdminRegistration";
 import SecurityOfficerRegistration from "@/pages/SecurityOfficerRegistration";
+import UserDirectory from "@/pages/UserDirectory";
+import { authService } from "@/services/authService";
 
 const OpManagerWeeklyReport = () => (
   <div className="bg-card rounded-lg p-6"><p>Weekly Report view coming soon</p></div>
@@ -52,10 +54,24 @@ function FeatureCard({
   );
 }
 
+function StatCard({ title, value, description }: { title: string; value: number; description: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-4xl font-bold text-primary mb-2">{value.toLocaleString()}</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
 export default function OperationalManagerDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
-  const [registrationView, setRegistrationView] = useState<"cards" | "admin" | "security">("cards");
+  const [registrationView, setRegistrationView] = useState<"cards" | "admin" | "security" | "directory">("cards");
   const [user, setUser] = useState<any>(null);
+  const [totalRegistrations, setTotalRegistrations] = useState<number>(0);
+  const [interviewApplicants, setInterviewApplicants] = useState<number>(0);
+  const [statsLoading, setStatsLoading] = useState<boolean>(true);
+  const [statsError, setStatsError] = useState<string>("");
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -69,6 +85,26 @@ export default function OperationalManagerDashboard() {
       navigate("/staff-login");
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      setStatsLoading(true);
+      setStatsError("");
+      try {
+        const users = await authService.getAllUsers();
+        setTotalRegistrations(Array.isArray(users) ? users.length : 0);
+
+        const savedApplicantCount = Number(localStorage.getItem("interviewApplicantsCount") || 0);
+        setInterviewApplicants(Number.isFinite(savedApplicantCount) ? savedApplicantCount : 0);
+      } catch (error: any) {
+        setStatsError(error?.message || "Unable to load dashboard stats");
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -135,7 +171,10 @@ export default function OperationalManagerDashboard() {
             Audit active profiles, update operational status, and review historical data across all levels.
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap shrink-0">
+        <button 
+          onClick={() => setRegistrationView("directory")}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap shrink-0"
+        >
           <ExternalLink className="h-4 w-4" />
           Open User Directory
         </button>
@@ -173,6 +212,18 @@ export default function OperationalManagerDashboard() {
         {renderHeader()}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1">
           <SecurityOfficerRegistration onBack={() => setRegistrationView("cards")} />
+        </main>
+        {renderFooter()}
+      </div>
+    );
+  }
+
+  if (activeTab === "registration" && registrationView === "directory") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {renderHeader()}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1">
+          <UserDirectory onBack={() => setRegistrationView("cards")} />
         </main>
         {renderFooter()}
       </div>
@@ -217,32 +268,34 @@ export default function OperationalManagerDashboard() {
               <p className="text-muted-foreground">Welcome back to the Ace Frontline Administrative Portal</p>
             </div>
 
-            {/* 3 Feature Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              <FeatureCard
-                icon={UserPlus}
-                title="Admin Personnel"
-                description="Complete onboarding for Directors, Chairmen, Operation Managers, and Account Executives. Manage administrative access levels and core platform permissions."
-                buttonText="Start Admin Registration"
-                onClick={() => { setActiveTab("registration"); setRegistrationView("admin"); }}
-              />
-              <FeatureCard
-                icon={Shield}
-                title="Security Force"
-                description="Register Security Officers and Area Managers. Define patrol zones, shift assignments, and operational reporting structures."
-                buttonText="Start Staff Registration"
-                onClick={() => { setActiveTab("registration"); setRegistrationView("security"); }}
-              />
-              <FeatureCard
-                icon={Building2}
-                title="Client Registration"
-                description="Module for onboarding corporate partners, managing service contracts, and configuring site-specific security requirements and personnel needs."
-                buttonText="Start Registration"
-              />
+            <div className="mb-6">
+              <p className="text-muted-foreground">Key operational statistics for your team.</p>
             </div>
 
-            {/* View All Users — full-width bar */}
-            {renderUserDirectoryBar()}
+            {statsError && (
+              <div className="rounded-lg border border-destructive bg-destructive/10 p-4 mb-6">
+                <p className="text-sm text-destructive">{statsError}</p>
+              </div>
+            )}
+
+            {statsLoading ? (
+              <div className="rounded-lg border border-border bg-card p-6 text-center">
+                <p className="text-muted-foreground">Loading dashboard statistics...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                <StatCard
+                  title="Total Registrations"
+                  value={totalRegistrations}
+                  description="Total number of users registered in the system."
+                />
+                <StatCard
+                  title="Interview Applicants"
+                  value={interviewApplicants}
+                  description="Current number of interview applicants tracked for this operational period."
+                />
+              </div>
+            )}
           </div>
         )}
 
