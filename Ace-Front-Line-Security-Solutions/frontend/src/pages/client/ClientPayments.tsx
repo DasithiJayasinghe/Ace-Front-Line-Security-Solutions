@@ -29,7 +29,9 @@ const formatLKR = (n: number) => `LKR ${n.toLocaleString("en-LK", { minimumFract
 
 const ClientPayments = () => {
     const navigate = useNavigate();
-    const clientId = Number(localStorage.getItem("clientId") ?? 0);
+    const token       = localStorage.getItem("token");
+    const clientIdRaw = localStorage.getItem("clientId");
+    const clientId    = clientIdRaw ? Number(clientIdRaw) : 0;
 
     const [payments, setPayments] = useState<any[]>([]);
     const [loading, setLoading]   = useState(true);
@@ -41,8 +43,15 @@ const ClientPayments = () => {
     const [rejectionReasonModal, setRejectionReasonModal] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!token || !clientIdRaw) {
+            setErr("Please log in as a client to view payment history.");
+            setPayments([]);
+            setLoading(false);
+            return;
+        }
         (async () => {
             try {
+                setErr("");
                 const data = await paymentApi.getByClient(clientId);
                 setPayments(data);
             } catch (e: any) {
@@ -51,7 +60,7 @@ const ClientPayments = () => {
                 setLoading(false);
             }
         })();
-    }, [clientId]);
+    }, [token, clientIdRaw, clientId]);
 
     /* ── Stats ── */
     const totalVerified = useMemo(() =>

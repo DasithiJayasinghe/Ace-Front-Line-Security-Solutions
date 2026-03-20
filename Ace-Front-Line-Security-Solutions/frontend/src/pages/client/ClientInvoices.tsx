@@ -46,12 +46,21 @@ const ClientInvoices = () => {
     const [page, setPage]             = useState(1);
     const navigate = useNavigate();
 
-    const clientId    = Number(localStorage.getItem("clientId") ?? 0);
+    const token       = localStorage.getItem("token");
+    const clientIdRaw = localStorage.getItem("clientId");
+    const clientId    = clientIdRaw ? Number(clientIdRaw) : 0;
     const companyName = localStorage.getItem("companyName") ?? "Client";
 
     useEffect(() => {
+        if (!token || !clientIdRaw) {
+            setErr("Please log in as a client to view invoices.");
+            setInvoices([]);
+            setLoading(false);
+            return;
+        }
         (async () => {
             try {
+                setErr("");
                 const data = await invoiceApi.getByClient(clientId);
                 setInvoices(data);
             } catch (e: any) {
@@ -60,7 +69,7 @@ const ClientInvoices = () => {
                 setLoading(false);
             }
         })();
-    }, [clientId]);
+    }, [token, clientIdRaw, clientId]);
 
     const totalOutstanding = useMemo(() =>
         invoices.filter(i => i.status !== "PAID" && i.status !== "WAIVED")

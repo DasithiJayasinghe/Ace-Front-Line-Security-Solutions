@@ -103,7 +103,9 @@ const ClientFeedback = () => {
     const [submitting, setSubmitting]               = useState(false);
     const [submitMsg, setSubmitMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-    const clientId    = Number(localStorage.getItem("clientId") ?? 0);
+    const token       = localStorage.getItem("token");
+    const clientIdRaw = localStorage.getItem("clientId");
+    const clientId    = clientIdRaw ? Number(clientIdRaw) : 0;
     const companyName = localStorage.getItem("companyName") ?? "Client";
 
     const load = async () => {
@@ -117,7 +119,18 @@ const ClientFeedback = () => {
         }
     };
 
-    useEffect(() => { load(); }, [clientId]);
+    useEffect(() => {
+        // Avoid hitting /api/feedback/client/0 (or any client endpoint) when not logged in as a client.
+        if (!token || !clientIdRaw) {
+            setErr("Please log in as a client to view and submit feedback.");
+            setList([]);
+            setLoading(false);
+            return;
+        }
+        setErr("");
+        setLoading(true);
+        load();
+    }, [token, clientIdRaw, clientId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
