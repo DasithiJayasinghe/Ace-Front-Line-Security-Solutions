@@ -26,8 +26,12 @@ import static org.mockito.Mockito.*;
 @DisplayName("LoanService – Unit Tests")
 class LoanServiceTest extends BaseServiceTest {
 
-    @Mock private LoanRequestRepository loanRequestRepository;
-    @Mock private UserRepository        userRepository;
+    @Mock
+    private LoanRequestRepository loanRequestRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private LoanDeductionService loanDeductionService;
 
     @InjectMocks
     private LoanService loanService;
@@ -54,12 +58,16 @@ class LoanServiceTest extends BaseServiceTest {
     }
 
     private ReviewRequest approve() {
-        ReviewRequest r = new ReviewRequest(); r.setApproved(true); return r;
+        ReviewRequest r = new ReviewRequest();
+        r.setApproved(true);
+        return r;
     }
 
     private ReviewRequest reject(String reason) {
-        ReviewRequest r = new ReviewRequest(); r.setApproved(false);
-        r.setRejectionReason(reason); return r;
+        ReviewRequest r = new ReviewRequest();
+        r.setApproved(false);
+        r.setRejectionReason(reason);
+        return r;
     }
 
     // =========================================================================
@@ -172,7 +180,7 @@ class LoanServiceTest extends BaseServiceTest {
         @DisplayName("account executive approval sets APPROVED status and records reviewer")
         void reviewLoan_approve_setsApprovedAndRecordsReviewer() {
             User officer = aSecurityOfficer();
-            User exec     = anAccountExecutive();
+            User exec = anAccountExecutive();
             LoanRequest loan = loanWithStatus(officer, RequestStatus.PENDING);
 
             when(loanRequestRepository.findById(300L)).thenReturn(Optional.of(loan));
