@@ -23,6 +23,7 @@ import { advanceService, type AdvanceRequest } from "@/services/advanceService";
 import { leaveService, type LeaveRequest } from "@/services/leaveService";
 import { paysheetService, type Paysheet } from "@/services/paysheetService";
 import { dashboardService } from "@/services/dashboardService";
+import UserDirectory from "@/pages/UserDirectory";
 
 type TabType =
   | "dashboard"
@@ -613,39 +614,7 @@ export default function ChairmanDashboard() {
 
         {/* ─── Registration List Tab ─── */}
         {!loading && activeTab === "registration-list" && (
-          <div>
-            <h2 className="text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Registration List
-            </h2>
-            <p className="text-muted-foreground mb-8">All registered personnel</p>
-
-            {uniqueUsers.length === 0 ? (
-              <p className="text-muted-foreground text-center py-12">No records available.</p>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border">
-                      <TableHead className="text-primary">ID</TableHead>
-                      <TableHead className="text-primary">Full Name</TableHead>
-                      <TableHead className="text-primary">Username</TableHead>
-                      <TableHead className="text-primary">Role</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {uniqueUsers.map((u) => (
-                      <TableRow key={u.id} className="border-border/50">
-                        <TableCell className="text-muted-foreground">{u.id}</TableCell>
-                        <TableCell className="text-foreground font-medium">{u.fullName}</TableCell>
-                        <TableCell className="text-muted-foreground">{u.username}</TableCell>
-                        <TableCell className="text-muted-foreground">{u.role?.replace(/_/g, " ") || "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
+          <UserDirectory />
         )}
       </main>
     </div>

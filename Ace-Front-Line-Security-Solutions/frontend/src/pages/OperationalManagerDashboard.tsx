@@ -21,7 +21,7 @@ const OpManagerClientFeedback = () => (
   <div className="bg-card rounded-lg p-6"><p>Client Feedback view coming soon</p></div>
 );
 
-type TabType = "dashboard" | "weekly-report" | "registration" | "interview" | "feedback";
+type TabType = "dashboard" | "weekly-report" | "registration" | "registration-list" | "interview" | "feedback";
 
 /* ─── Feature card: centred icon → title → description → CTA ─── */
 function FeatureCard({
@@ -120,6 +120,7 @@ export default function OperationalManagerDashboard() {
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" as TabType },
     { icon: FileText, label: "Weekly Report", id: "weekly-report" as TabType },
     { icon: UserPlus, label: "Registration Management", id: "registration" as TabType },
+    { icon: Users, label: "Registration List", id: "registration-list" as TabType },
     { icon: Users, label: "Interview Management", id: "interview" as TabType },
     { icon: MessageSquare, label: "Client Feedback", id: "feedback" as TabType },
   ];
@@ -359,6 +360,11 @@ export default function OperationalManagerDashboard() {
             <p className="text-muted-foreground mb-8">Review and respond to client feedback.</p>
             <OpManagerClientFeedback />
           </div>
+        )}
+
+        {/* ─── Registration List Tab ─── */}
+        {activeTab === "registration-list" && (
+          <UserDirectory />
         )}
       </main>
 

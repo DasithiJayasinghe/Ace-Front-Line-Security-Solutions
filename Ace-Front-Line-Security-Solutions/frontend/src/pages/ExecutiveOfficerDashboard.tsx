@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, DollarSign, TrendingUp, Award, User, LogOut, Menu, X, Shirt, Calendar, Check, AlertCircle, XCircle, Loader, FileText } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +19,7 @@ export default function ExecutiveOfficerDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuthenticatedUser();
+  const { user, isLoading } = useAuthenticatedUser();
   const isProfile = location.pathname.endsWith("/profile");
 
   // new states
@@ -127,6 +127,31 @@ export default function ExecutiveOfficerDashboard() {
       return () => clearInterval(interval);
     }
   }, [activeItem]);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      toast({
+        title: "Error",
+        description: "User data could not be loaded. Please log in again.",
+        variant: "destructive",
+      });
+      navigate("/staff-login");
+    }
+  }, [isLoading, user, toast, navigate]);
+
+  // Show loading state while user data is being fetched
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Ensure user is loaded before rendering
+  if (!user) {
+    return null;
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token");
