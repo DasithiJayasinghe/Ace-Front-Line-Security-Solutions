@@ -13,6 +13,12 @@ import PlaceholderPage from "./components/PlaceholderPage";
 import Careers from "./pages/Careers";
 import Inquiries from "./pages/Inquiries";
 
+import JsoSchedulePage from "./pages/shift-schedule/JsoSchedulePage";
+import AreaManagerSchedulePage from "./pages/shift-schedule/AreaManagerSchedulePage";
+import OfficerSchedulePage from "./pages/shift-schedule/OfficerSchedulePage";
+import ExecutiveSchedulePage from "./pages/shift-schedule/ExecutiveSchedulePage";
+import ClientSchedulePage from "./pages/shift-schedule/ClientSchedulePage";
+
 const queryClient = new QueryClient();
 
 const areaManagerItems = [
@@ -96,13 +102,17 @@ const clientItems = [
   { label: "Payments", path: "payments" },
 ];
 
+import MyLeaveRequests from "./pages/leave-requests/MyLeaveRequests";
+import AreaManagerLeaveApprovals from "./pages/leave-requests/AreaManagerLeaveApprovals";
+
 function renderDashboardRoutes(items: { label: string; path: string }[]) {
   return (
     <>
       <Route index element={<PlaceholderPage title="Dashboard" />} />
-      {items.map((item) => (
-        <Route key={item.path} path={item.path} element={<PlaceholderPage title={item.label} />} />
-      ))}
+      {items.map((item) => {
+        if (item.path === 'shift-schedule' || item.path === 'request-leave' || item.path === 'leave-management') return null;
+        return <Route key={item.path} path={item.path} element={<PlaceholderPage title={item.label} />} />;
+      })}
       <Route path="profile" element={<PlaceholderPage title="Profile" />} />
     </>
   );
@@ -123,6 +133,8 @@ const App = () => (
           <Route path="/inquiries" element={<Inquiries />} />
 
           <Route path="/area-manager" element={<DashboardLayout title="Area Manager" role="Area Manager" items={areaManagerItems} basePath="/area-manager" />}>
+            <Route path="shift-schedule" element={<AreaManagerSchedulePage />} />
+            <Route path="leave-management" element={<AreaManagerLeaveApprovals />} />
             {renderDashboardRoutes(areaManagerItems)}
           </Route>
 
@@ -131,10 +143,13 @@ const App = () => (
           </Route>
 
           <Route path="/operational-manager" element={<DashboardLayout title="Operational Manager" role="Operational Manager" items={operationalManagerItems} basePath="/operational-manager" />}>
+            <Route path="request-leave" element={<MyLeaveRequests />} />
             {renderDashboardRoutes(operationalManagerItems)}
           </Route>
 
           <Route path="/executive-officer" element={<DashboardLayout title="Executive Officer" role="Executive Officer" items={executiveOfficerItems} basePath="/executive-officer" />}>
+            <Route path="shift-schedule" element={<ExecutiveSchedulePage />} />
+            <Route path="request-leave" element={<MyLeaveRequests />} />
             {renderDashboardRoutes(executiveOfficerItems)}
           </Route>
 
@@ -147,10 +162,14 @@ const App = () => (
           </Route>
 
           <Route path="/security-officer" element={<DashboardLayout title="Security Officer" role="Security Officer" items={securityOfficerItems} basePath="/security-officer" />}>
+            <Route path="shift-schedule" element={<JsoSchedulePage />} />
+            <Route path="officer-shifts" element={<OfficerSchedulePage />} />
+            <Route path="request-leave" element={<MyLeaveRequests />} />
             {renderDashboardRoutes(securityOfficerItems)}
           </Route>
 
           <Route path="/client" element={<DashboardLayout title="Client Portal" role="Client" items={clientItems} basePath="/client" />}>
+            <Route path="shift-schedule" element={<ClientSchedulePage />} />
             {renderDashboardRoutes(clientItems)}
           </Route>
 

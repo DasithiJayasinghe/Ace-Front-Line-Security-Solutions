@@ -3,6 +3,7 @@ import { Shield, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import NotificationBell from "./NotificationBell";
 
 interface SidebarItem {
   label: string;
@@ -68,7 +69,8 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
       <main className="flex-1 bg-background">
         <header className="h-16 border-b bg-card px-8 flex items-center justify-between">
           <h1 className="text-lg font-bold text-foreground">{title}</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <NotificationBell />
             <div className="text-right">
               <p className="text-sm font-semibold text-foreground">{role}</p>
               <p className="text-[10px] text-muted-foreground">Logged in</p>
