@@ -1,27 +1,27 @@
 package com.security.Ace.Front.Line.Security.Solutions.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Entity
-@Table(name = "users")
+@Table(name = "client_companies")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+@Builder
+public class ClientCompany {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String email;
-
     @Column(nullable = false)
-    private String password;
+    private String name;
 
-    @Column(nullable = false)
-    private String role; // OPERATIONAL_MANAGER, EXECUTIVE, CHAIRMAN, DIRECTOR
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
 }

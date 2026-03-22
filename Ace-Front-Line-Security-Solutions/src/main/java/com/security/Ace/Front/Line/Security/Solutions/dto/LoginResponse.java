@@ -1,12 +1,11 @@
 package com.security.Ace.Front.Line.Security.Solutions.dto;
 
-import lombok.Data;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 
 @Data
 @AllArgsConstructor
 public class LoginResponse {
-    private String message;
+    private String token;
     private String role;
-    private String redirectUrl;
 }

@@ -6,6 +6,7 @@ import com.security.Ace.Front.Line.Security.Solutions.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.security.Ace.Front.Line.Security.Solutions.dto.UserInfoDTO;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -24,4 +25,10 @@ public class AuthController {
             return ResponseEntity.status(401).body(e.getMessage());
         }
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserInfoDTO> getCurrentUser() {
+        return ResponseEntity.ok(authService.getCurrentUserInfo());
+    }
+
 }

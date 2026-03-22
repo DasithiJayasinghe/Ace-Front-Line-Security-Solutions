@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Ace-Front-Line-Security-Solutions.iml" filepath="$PROJECT_DIR$/.idea/Ace-Front-Line-Security-Solutions.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Ace-Front-Line-Security-Solutions/Ace-Front-Line-Security-Solutions.iml" filepath="$PROJECT_DIR$/Ace-Front-Line-Security-Solutions/Ace-Front-Line-Security-Solutions.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Project File.iml" filepath="$PROJECT_DIR$/.idea/Project File.iml" />
     </modules>
   </component>
 </project>

@@ -4,21 +4,27 @@ import com.security.Ace.Front.Line.Security.Solutions.dto.LoginRequest;
 import com.security.Ace.Front.Line.Security.Solutions.dto.LoginResponse;
 import com.security.Ace.Front.Line.Security.Solutions.entity.User;
 import com.security.Ace.Front.Line.Security.Solutions.repository.UserRepository;
+import com.security.Ace.Front.Line.Security.Solutions.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 public class AuthServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private JwtService jwtService;
 
     @InjectMocks
     private AuthService authService;
@@ -30,8 +36,9 @@ public class AuthServiceTest {
 
     @Test
     public void testLoginOperationalManager() {
-        User user = new User(1L, "ops@ace.com", "ops123", "OPERATIONAL_MANAGER");
+        User user = new User(1L, "ops@ace.com", "ops123", "OPERATIONAL_MANAGER",null,null,null);
         when(userRepository.findByEmail("ops@ace.com")).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(anyString())).thenReturn("mock-jwt-token");
 
         LoginRequest request = new LoginRequest();
         request.setEmail("ops@ace.com");
@@ -39,13 +46,14 @@ public class AuthServiceTest {
 
         LoginResponse response = authService.login(request);
         assertEquals("OPERATIONAL_MANAGER", response.getRole());
-        assertEquals("/operational-manager", response.getRedirectUrl());
+        assertNotNull(response.getToken());
     }
 
     @Test
     public void testLoginExecutive() {
-        User user = new User(1L, "exec1@ace.com", "exec123", "EXECUTIVE");
+        User user = new User(1L, "exec1@ace.com", "exec123", "EXECUTIVE",null,null, null);
         when(userRepository.findByEmail("exec1@ace.com")).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(anyString())).thenReturn("mock-jwt-token");
 
         LoginRequest request = new LoginRequest();
         request.setEmail("exec1@ace.com");
@@ -53,6 +61,6 @@ public class AuthServiceTest {
 
         LoginResponse response = authService.login(request);
         assertEquals("EXECUTIVE", response.getRole());
-        assertEquals("/executive", response.getRedirectUrl());
+        assertNotNull(response.getToken());
     }
 }
