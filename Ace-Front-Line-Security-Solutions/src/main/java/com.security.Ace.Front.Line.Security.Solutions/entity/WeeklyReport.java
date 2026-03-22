@@ -35,6 +35,11 @@ public class WeeklyReport {
     @Column(nullable = false)
     private Integer year;
 
+    // The schedule's client company name for this weekly report row.
+    // This is used for filtering weekly reports by company in the UI.
+    @Column(name = "client_company_name")
+    private String clientCompanyName;
+
     @Column(nullable = false)
     private LocalDate weekStartDate;
 

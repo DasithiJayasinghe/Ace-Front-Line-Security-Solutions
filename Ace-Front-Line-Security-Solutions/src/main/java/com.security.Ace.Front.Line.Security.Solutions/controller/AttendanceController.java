@@ -1,6 +1,8 @@
 package com.security.Ace.Front.Line.Security.Solutions.controller;
 
 import com.security.Ace.Front.Line.Security.Solutions.dto.AttendanceDTO;
+import com.security.Ace.Front.Line.Security.Solutions.dto.SecurityOfficerUserOptionDTO;
+import com.security.Ace.Front.Line.Security.Solutions.entity.SecurityOfficer;
 import com.security.Ace.Front.Line.Security.Solutions.service.AttendanceService;
 //import lk.acefrontline.dto.AttendanceDTO;
 //import lk.acefrontline.service.AttendanceService;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/attendance")
@@ -65,6 +68,23 @@ public class AttendanceController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         List<AttendanceDTO> attendance = attendanceService.getAttendanceByManagerInPeriod(managerId, startDate, endDate);
         return ResponseEntity.ok(attendance);
+    }
+
+    @GetMapping("/manager/{managerId}/approved-officers")
+    public ResponseEntity<List<SecurityOfficer>> getApprovedOfficersByDate(
+            @PathVariable Long managerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(attendanceService.getApprovedOfficersByDate(managerId, date));
+    }
+
+    /** Officers with an allocation on {@code date} on any APPROVED schedule (attendance officer dropdown). */
+    @GetMapping("/approved-officers")
+    public ResponseEntity<List<SecurityOfficerUserOptionDTO>> getApprovedOfficersByShiftDate(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        List<SecurityOfficerUserOptionDTO> list = attendanceService.getApprovedOfficersByShiftDate(date).stream()
+                .map(o -> new SecurityOfficerUserOptionDTO(o.getId(), o.getFullName(), o.getSecurityId()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(list);
     }
 
     @DeleteMapping("/{id}")

@@ -4,8 +4,10 @@ import com.security.Ace.Front.Line.Security.Solutions.dto.AttendanceDTO;
 import com.security.Ace.Front.Line.Security.Solutions.entity.Attendance;
 import com.security.Ace.Front.Line.Security.Solutions.entity.AreaManager;
 import com.security.Ace.Front.Line.Security.Solutions.entity.SecurityOfficer;
+import com.security.Ace.Front.Line.Security.Solutions.entity.ShiftAssignment;
 import com.security.Ace.Front.Line.Security.Solutions.repository.AttendanceRepository;
 import com.security.Ace.Front.Line.Security.Solutions.repository.AreaManagerRepository;
+import com.security.Ace.Front.Line.Security.Solutions.repository.ShiftAssignmentRepository;
 import com.security.Ace.Front.Line.Security.Solutions.repository.SecurityOfficerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -31,11 +33,15 @@ public class AttendanceService {
     private AreaManagerRepository areaManagerRepository;
 
     @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+
+    @Autowired
     @Lazy
     private WeeklyReportService weeklyReportService;
 
     private static final int MAX_SHIFTS_PER_MONTH = 60;
     private static final double STANDARD_SHIFT_HOURS = 8.0;
+    private static final double MAX_OT_HOURS_PER_MONTH = 180.0;
 
     @Transactional
     public AttendanceDTO createAttendance(AttendanceDTO dto, Long managerId) {
@@ -82,6 +88,18 @@ public class AttendanceService {
             attendance.setOvertimeHours(dto.getOvertimeHours());
         }
 
+        // Enforce monthly OT limit (180 hours) based on final OT value for this record
+        Double newOt = attendance.getOvertimeHours() != null ? attendance.getOvertimeHours() : 0.0;
+        if (newOt > 0.0) {
+            Double existingOt = attendanceRepository.sumOvertimeHoursByOfficerInPeriod(
+                    officer.getId(), monthStart, monthEnd);
+            double totalOt = (existingOt != null ? existingOt : 0.0) + newOt;
+            if (totalOt > MAX_OT_HOURS_PER_MONTH) {
+                throw new RuntimeException("Officer has reached maximum OT hours for the month ("
+                        + MAX_OT_HOURS_PER_MONTH + " hours)");
+            }
+        }
+
         Attendance saved = attendanceRepository.save(attendance);
         updateWeeklyReportForAttendance(saved, managerId);
         return convertToDTO(saved);
@@ -98,12 +116,32 @@ public class AttendanceService {
         attendance.setRemarks(dto.getRemarks());
         attendance.setIsShiftCounted(dto.getIsShiftCounted());
 
+        // Keep old OT before recalculating for monthly limit check
+        Double oldOt = attendance.getOvertimeHours() != null ? attendance.getOvertimeHours() : 0.0;
+
         // Recalculate hours and OT from times
         calculateHours(attendance);
 
         // If OT hours were provided explicitly, override calculated OT
         if (dto.getOvertimeHours() != null) {
             attendance.setOvertimeHours(dto.getOvertimeHours());
+        }
+
+        // Enforce monthly OT limit (180 hours) for updates
+        Double newOt = attendance.getOvertimeHours() != null ? attendance.getOvertimeHours() : 0.0;
+        if (!oldOt.equals(newOt)) {
+            LocalDate date = attendance.getAttendanceDate();
+            YearMonth yearMonth = YearMonth.from(date);
+            LocalDate monthStart = yearMonth.atDay(1);
+            LocalDate monthEnd = yearMonth.atEndOfMonth();
+
+            Double existingOt = attendanceRepository.sumOvertimeHoursByOfficerInPeriod(
+                    attendance.getSecurityOfficer().getId(), monthStart, monthEnd);
+            double totalOt = (existingOt != null ? existingOt : 0.0) - oldOt + newOt;
+            if (totalOt > MAX_OT_HOURS_PER_MONTH) {
+                throw new RuntimeException("Officer has reached maximum OT hours for the month ("
+                        + MAX_OT_HOURS_PER_MONTH + " hours)");
+            }
         }
 
         Attendance updated = attendanceRepository.save(attendance);
@@ -119,18 +157,18 @@ public class AttendanceService {
     }
 
     /**
-     * Refresh the weekly report for this officer and week so the Weekly Report area reflects
-     * the latest attendance. Only attendances with "Count as Shift" = true are included in the report.
+     * Refresh the weekly report for this officer and week: {@code totalShifts} stays tied to the
+     * approved shift schedule; {@code totalHoursWorked} and {@code totalOvertimeHours} are summed
+     * from {@code attendance} rows for scheduled days (see {@link WeeklyReportService#generateWeeklyReport}).
      */
     private void updateWeeklyReportForAttendance(Attendance attendance, Long managerId) {
         try {
             weeklyReportService.generateWeeklyReport(
                     attendance.getSecurityOfficer().getId(),
                     managerId,
-                    attendance.getAttendanceDate()
-            );
-        } catch (Exception e) {
-            // Log but do not fail the attendance save
+                    attendance.getAttendanceDate());
+        } catch (Exception ignored) {
+            // Do not fail attendance persistence if weekly report refresh cannot run
         }
     }
 
@@ -175,6 +213,25 @@ public class AttendanceService {
         return attendanceRepository.findByAreaManagerInPeriod(managerId, startDate, endDate).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns officers who have shift allocations on the given date
+     * from APPROVED schedules, for the given area manager.
+     */
+    public List<SecurityOfficer> getApprovedOfficersByDate(Long managerId, LocalDate date) {
+        if (managerId == null || date == null) return List.of();
+        return shiftAssignmentRepository.findApprovedOfficersByAreaManagerAndDate(managerId, date);
+    }
+
+    /**
+     * Officers allocated on {@code date} on an APPROVED shift schedule (used for attendance dropdown).
+     */
+    public List<SecurityOfficer> getApprovedOfficersByShiftDate(LocalDate date) {
+        if (date == null) {
+            return List.of();
+        }
+        return shiftAssignmentRepository.findApprovedOfficersByShiftDate(date);
     }
 
     public void deleteAttendance(Long id) {

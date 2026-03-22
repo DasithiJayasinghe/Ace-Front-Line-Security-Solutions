@@ -34,7 +34,7 @@ public class AuthService {
             case "OPERATIONAL_MANAGER":
                 return "/operational-manager";
             case "EXECUTIVE":
-                return "/executive-officer";
+                return "/executive";
             case "CHAIRMAN":
                 return "/chairman";
             case "DIRECTOR":

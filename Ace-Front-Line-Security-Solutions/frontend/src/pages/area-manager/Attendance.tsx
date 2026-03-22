@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Chart } from "chart.js/auto";
 import "./Attendance.css";
-
-const MANAGER_ID = 1;
+import { hslVar } from "@/lib/utils";
 
 interface SecurityOfficer {
   id: number;
@@ -27,9 +26,12 @@ export default function Attendance() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [shiftAlert, setShiftAlert] = useState({ show: false, message: "" });
+
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const [form, setForm] = useState({
     securityOfficerId: "",
-    attendanceDate: "",
+    attendanceDate: todayStr,
     checkInTime: "",
     checkOutTime: "",
     status: "PRESENT",
@@ -46,7 +48,8 @@ export default function Attendance() {
   const chartInstance = useRef<Chart | null>(null);
 
   const filteredRecords = records.filter((r) => {
-    if (tableFilters.date && r.attendanceDate !== tableFilters.date) return false;
+    const recIso = r.attendanceDate ? String(r.attendanceDate).slice(0, 10) : "";
+    if (tableFilters.date && recIso !== tableFilters.date) return false;
     if (
       tableFilters.officerName &&
       !r.securityOfficerName.toLowerCase().includes(tableFilters.officerName.toLowerCase())
@@ -64,9 +67,57 @@ export default function Attendance() {
     tableFilters.officerName !== "" ||
     tableFilters.securityId !== "";
 
-  const recentRecords = [...filteredRecords]
-    .sort((a, b) => b.attendanceDate.localeCompare(a.attendanceDate))
-    .slice(0, 10);
+  const parseISODateToLocalMidnight = (iso: string) => {
+    // Treat `YYYY-MM-DD` as a calendar date in the user's local timezone.
+    // This avoids the "off by one day" problem that happens with `new Date('YYYY-MM-DD')` parsing as UTC.
+    const [y, m, d] = iso.split("-").map((x) => parseInt(x, 10));
+    if (!y || !m || !d) return 0;
+    return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+  };
+
+  const formatISODate = (iso: string) => {
+    const ms = parseISODateToLocalMidnight(iso);
+    if (!ms) return iso;
+    return new Date(ms).toLocaleDateString();
+  };
+
+  const parsedRecDateIso = (r: AttendanceRecord) =>
+    r.attendanceDate ? String(r.attendanceDate).slice(0, 10) : "";
+
+  const recentSorted = [...filteredRecords].sort((a, b) => {
+    const dateDiff =
+      parseISODateToLocalMidnight(String(b.attendanceDate)) -
+      parseISODateToLocalMidnight(String(a.attendanceDate));
+
+    // If dates are equal, prefer the higher DB id (when present).
+    if (dateDiff !== 0) return dateDiff;
+    return (b.id ?? 0) - (a.id ?? 0);
+  });
+
+  // The table should always show details for the date the user is currently looking at:
+  // - if "Filter by Date" is set, use that
+  // - otherwise use the form's `attendanceDate`
+  const activeIsoDate = tableFilters.date
+    ? tableFilters.date
+    : form.attendanceDate
+      ? String(form.attendanceDate).slice(0, 10)
+      : "";
+
+  const activeDateRecords =
+    activeIsoDate !== ""
+      ? recentSorted.filter((r) => parsedRecDateIso(r) === activeIsoDate)
+      : [];
+
+  const otherRecords =
+    activeIsoDate !== ""
+      ? recentSorted.filter((r) => parsedRecDateIso(r) !== activeIsoDate)
+      : recentSorted;
+
+  const remainingSlots = Math.max(0, 10 - activeDateRecords.length);
+  const recentRecords = [
+    ...activeDateRecords,
+    ...(otherRecords as AttendanceRecord[]).slice(0, remainingSlots),
+  ];
 
   const calculatedHours = (() => {
     const { checkInTime: inVal, checkOutTime: outVal } = form;
@@ -99,31 +150,75 @@ export default function Attendance() {
   }, [form.checkInTime, form.checkOutTime]);
 
   async function loadOfficers() {
+    const date = form.attendanceDate;
+    if (!date) {
+      setOfficers([]);
+      return;
+    }
     try {
-      const res = await fetch(`/api/security-officers/manager/${MANAGER_ID}`);
+      const res = await fetch(
+        `/api/attendance/approved-officers?date=${encodeURIComponent(String(date).slice(0, 10))}`
+      );
+      if (!res.ok) {
+        setOfficers([]);
+        return;
+      }
       const data = await res.json();
-      setOfficers(Array.isArray(data) ? data : []);
+      const list: SecurityOfficer[] = Array.isArray(data)
+        ? data.map(
+            (o: {
+              securityOfficerId: number;
+              securityOfficerName: string;
+              securityId?: string | null;
+            }) => ({
+              id: o.securityOfficerId,
+              fullName: o.securityOfficerName,
+              securityId: o.securityId?.trim() ? o.securityId.trim() : "",
+            })
+          )
+        : [];
+      setOfficers(list);
+      setForm((f) => {
+        const currentId = f.securityOfficerId ? parseInt(f.securityOfficerId, 10) : null;
+        if (currentId && !list.some((o) => o.id === currentId)) {
+          return { ...f, securityOfficerId: "" };
+        }
+        return f;
+      });
     } catch (e) {
       console.error("Error loading officers:", e);
       setOfficers([]);
     }
   }
 
-  async function loadAttendance() {
+  async function loadAttendance(dateIso?: string) {
     setRecordsLoading(true);
     try {
-      const today = new Date();
-      const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
-      const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split("T")[0];
-      const res = await fetch(`/api/attendance/date-range?startDate=${startDate}&endDate=${endDate}`);
+      // Load records for the month that the user is currently working on.
+      // This ensures a saved April record appears in "Recent Attendance Records" immediately.
+      const iso = dateIso ?? form.attendanceDate;
+      const isoStr = iso ? String(iso) : "";
+      if (!isoStr) {
+        setRecords([]);
+        return;
+      }
+      const [yStr, mStr] = String(iso).split("-");
+      const y = parseInt(yStr, 10);
+      const m = parseInt(mStr, 10);
+
+      const base = Number.isFinite(y) && Number.isFinite(m) ? new Date(y, m - 1, 1) : new Date();
+      const startDate = new Date(base.getFullYear(), base.getMonth(), 1).toISOString().split("T")[0];
+      const endDate = new Date(base.getFullYear(), base.getMonth() + 1, 0).toISOString().split("T")[0];
+
+      const res = await fetch(
+        `/api/attendance/date-range?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+      );
       const raw = await res.json();
       const data: AttendanceRecord[] = Array.isArray(raw) ? raw : [];
       setRecords(data);
-      updateChart(data);
     } catch (e) {
       console.error("Error loading attendance:", e);
       setRecords([]);
-      updateChart([]);
     } finally {
       setRecordsLoading(false);
     }
@@ -136,38 +231,110 @@ export default function Attendance() {
       acc[r.status] = (acc[r.status] || 0) + 1;
       return acc;
     }, {});
+
+    const primary = hslVar("--primary");
+    const destructive = hslVar("--destructive");
+    const accent = hslVar("--accent");
+    const mutedForeground = hslVar("--muted-foreground");
+    const border = hslVar("--border");
+    const foreground = hslVar("--foreground");
+    const tooltipBg = hslVar("--card") || hslVar("--background");
+
+    // Stable status -> color mapping using your theme tokens
+    const labelKeys = Object.keys(statusCounts);
+    const statusColor = (status: string) => {
+      switch (status) {
+        case "PRESENT":
+          return primary || "#F4CC00";
+        case "ABSENT":
+          return destructive || "#DC3545";
+        case "HALF_DAY":
+          return accent || "#111111";
+        case "LEAVE":
+          return border || "#CBD5E1";
+        default:
+          return border || "#CBD5E1";
+      }
+    };
+
     if (chartInstance.current) chartInstance.current.destroy();
     chartInstance.current = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: Object.keys(statusCounts),
+        labels: labelKeys,
         datasets: [
           {
             label: "Attendance Status",
             data: Object.values(statusCounts),
-            backgroundColor: ["#28a745", "#dc3545", "#ffc107", "#17a2b8"],
-            borderColor: "#1a1a1a",
-            borderWidth: 2,
+            backgroundColor: labelKeys.map(statusColor),
+            borderColor: border || "rgba(0,0,0,0.1)",
+            borderWidth: 1,
+            borderRadius: 8,
+            maxBarThickness: 56,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            grid: { color: border ? border : "rgba(0,0,0,0.06)" },
+            ticks: { color: mutedForeground || "#666", font: { family: "Public Sans" } },
+          },
+          y: {
+            beginAtZero: true,
+            max: 31,
+            ticks: {
+              stepSize: 1,
+              color: mutedForeground || "#666",
+              font: { family: "Public Sans" },
+            },
+            suggestedMax: 31,
+            grid: { color: border ? border : "rgba(0,0,0,0.06)" },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: tooltipBg || "rgba(255,255,255,0.95)",
+            titleColor: foreground || "#111",
+            bodyColor: mutedForeground || "#444",
+            borderColor: border || "rgba(0,0,0,0.1)",
+            borderWidth: 1,
+            titleFont: { family: "Public Sans", weight: 600 },
+            bodyFont: { family: "Public Sans" },
+          },
+        },
       },
     });
   }
 
+  // Keep the monthly overview chart in sync with the filtered records
   useEffect(() => {
-    loadOfficers();
-    loadAttendance();
-    setForm((f) => ({ ...f, attendanceDate: new Date().toISOString().split("T")[0] }));
+    updateChart(filteredRecords);
+  }, [filteredRecords]);
+
+  useEffect(() => {
     return () => {
       if (chartInstance.current) chartInstance.current.destroy();
     };
   }, []);
+
+  // Officers allocated on an APPROVED shift schedule for the selected attendance date.
+  useEffect(() => {
+    void loadOfficers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.attendanceDate]);
+
+  // Reload attendance records when the user changes:
+  // - the form date (what they are recording/editing)
+  // - or the "Filter by Date" date (what they want to inspect in the recent table)
+  useEffect(() => {
+    const effectiveIso = tableFilters.date ? tableFilters.date : form.attendanceDate;
+    loadAttendance(effectiveIso);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableFilters.date, form.attendanceDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -190,9 +357,18 @@ export default function Attendance() {
       });
       if (res.ok) {
         alert("Attendance recorded successfully!");
+        // Ensure the "Recent Attendance Records" table shows the record we just saved.
+        // This avoids confusion when the user previously used table filters.
+        setTableFilters({
+          date: form.attendanceDate ? String(form.attendanceDate).slice(0, 10) : "",
+          officerName: "",
+          securityId: "",
+        });
         setForm({
           securityOfficerId: "",
-          attendanceDate: new Date().toISOString().split("T")[0],
+          // Keep the selected date so the "Recent Attendance Records" table
+          // reloads the same month and shows the saved entry immediately.
+          attendanceDate: form.attendanceDate,
           checkInTime: "",
           checkOutTime: "",
           status: "PRESENT",
@@ -247,7 +423,8 @@ export default function Attendance() {
                   <option value="">Select Officer</option>
                   {officers.map((o) => (
                     <option key={o.id} value={o.id}>
-                      {o.fullName} ({o.securityId})
+                      {o.fullName}
+                      {o.securityId ? ` (${o.securityId})` : ""}
                     </option>
                   ))}
                 </select>
@@ -416,7 +593,11 @@ export default function Attendance() {
             ) : (
               recentRecords.map((record, idx) => (
                 <tr key={record.id ?? idx}>
-                  <td>{new Date(record.attendanceDate).toLocaleDateString()}</td>
+                  <td>
+                    {record.attendanceDate
+                      ? formatISODate(String(record.attendanceDate))
+                      : "-"}
+                  </td>
                   <td>{record.securityOfficerName}</td>
                   <td>{record.securityId}</td>
                   <td>{record.checkInTime ?? "-"}</td>

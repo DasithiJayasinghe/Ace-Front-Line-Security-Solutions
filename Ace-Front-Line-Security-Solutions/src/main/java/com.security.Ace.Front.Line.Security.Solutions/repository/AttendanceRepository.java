@@ -38,6 +38,19 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
 
+    /** Sum working hours for scheduled days only (dates must match approved shift assignment days). */
+    @Query("SELECT COALESCE(SUM(a.hoursWorked), 0.0) FROM Attendance a WHERE a.securityOfficer.id = :officerId " +
+            "AND a.attendanceDate IN :dates")
+    Double sumHoursWorkedByOfficerOnDates(
+            @Param("officerId") Long officerId,
+            @Param("dates") List<LocalDate> dates);
+
+    @Query("SELECT COALESCE(SUM(a.overtimeHours), 0.0) FROM Attendance a WHERE a.securityOfficer.id = :officerId " +
+            "AND a.attendanceDate IN :dates")
+    Double sumOvertimeHoursByOfficerOnDates(
+            @Param("officerId") Long officerId,
+            @Param("dates") List<LocalDate> dates);
+
     @Query("SELECT a FROM Attendance a WHERE a.securityOfficer.areaManager.id = :managerId " +
             "AND a.attendanceDate BETWEEN :startDate AND :endDate")
     List<Attendance> findByAreaManagerInPeriod(

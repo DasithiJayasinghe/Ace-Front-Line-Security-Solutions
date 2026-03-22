@@ -22,8 +22,9 @@ public class AreaManager {
     @Column(nullable = false)
     private String fullName;
 
-    @Column(nullable = false)
-    private String branch;
+    @ManyToOne
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
 
     @Column(nullable = false, unique = true)
     private String email;

@@ -22,13 +22,13 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="w-64 bg-charcoal text-charcoal-foreground flex flex-col shrink-0">
-        <div className="p-6 border-b border-charcoal-foreground/10">
+      <aside className="w-64 bg-black flex flex-col shrink-0">
+        <div className="p-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-3">
-            <Shield className="h-7 w-7 text-primary" />
+            <Shield className="h-7 w-7 text-white" />
             <div className="leading-none">
-              <p className="font-extrabold text-sm uppercase tracking-tight">Ace Front Line</p>
-              <p className="text-[9px] tracking-[0.2em] text-charcoal-foreground/50 uppercase mt-0.5">{role}</p>
+              <p className="font-extrabold text-sm uppercase tracking-tight text-white">Ace Front Line</p>
+              <p className="text-[9px] tracking-[0.2em] text-white/70 uppercase mt-0.5">{role}</p>
             </div>
           </Link>
         </div>
@@ -44,8 +44,8 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
                 className={cn(
                   "block px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-charcoal-foreground/70 hover:bg-charcoal-foreground/5 hover:text-charcoal-foreground"
+                    ? "bg-[#F4CC00] text-black"
+                    : "text-white hover:bg-white/10 hover:text-white"
                 )}
               >
                 {item.label}
@@ -54,11 +54,11 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
           })}
         </nav>
 
-        <div className="p-4 border-t border-charcoal-foreground/10 space-y-2">
-          <Link to={`${basePath}/profile`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal-foreground/70 hover:bg-charcoal-foreground/5 hover:text-charcoal-foreground transition-all">
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <Link to={`${basePath}/profile`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-all">
             <User className="h-4 w-4" /> Profile
           </Link>
-          <Link to="/" className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all">
+          <Link to="/" className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white transition-all">
             <LogOut className="h-4 w-4" /> Logout
           </Link>
         </div>
@@ -74,8 +74,8 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
               <p className="text-[10px] text-muted-foreground">Logged in</p>
             </div>
             <Link to={`${basePath}/profile`}>
-              <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+              <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-[#F4CC00] transition-all">
+                <AvatarFallback className="bg-[#F4CC00] text-black font-bold text-sm">
                   {role.split(" ").map(w => w[0]).join("").slice(0, 2)}
                 </AvatarFallback>
               </Avatar>

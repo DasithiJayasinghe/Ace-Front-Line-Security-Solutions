@@ -24,6 +24,13 @@ public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long
     Optional<WeeklyReport> findBySecurityOfficerIdAndYearAndMonthAndWeekNumber(
             Long securityOfficerId, Integer year, Integer month, Integer weekNumber);
 
+    Optional<WeeklyReport> findBySecurityOfficerIdAndYearAndMonthAndWeekNumberAndClientCompanyName(
+            Long securityOfficerId,
+            Integer year,
+            Integer month,
+            Integer weekNumber,
+            String clientCompanyName);
+
     @Query("SELECT w FROM WeeklyReport w WHERE w.areaManager.id = :managerId " +
             "AND w.year = :year ORDER BY w.month, w.weekNumber")
     List<WeeklyReport> findByManagerAndYear(

@@ -6,54 +6,96 @@
 
 .area-weekly {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: #f5f5f5;
+  background: #FFF9E3;
   color: #1a1a1a;
+  min-height: 100vh;
+  padding-bottom: 40px;
+  position: relative;
+}
+
+.area-weekly::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(90, 94, 39, 0.18) 0%, transparent 55%),
+    radial-gradient(circle at 80% 70%, rgba(100, 0, 23, 0.12) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .area-weekly .header {
-  background: white;
+  background: #000000;
   padding: 25px 30px;
-  border-radius: 10px;
+  border-radius: 16px;
   margin-bottom: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border-left: 5px solid #ffd700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-left: 5px solid #000000;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.area-weekly .header::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  pointer-events: none;
+}
+
+.area-weekly .header:hover {
+  box-shadow: 0 12px 32px rgba(28, 46, 74, 0.4), 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .area-weekly .header h2 {
-  color: #1a1a1a;
+  color: #FFFFFF;
   font-size: 28px;
   margin-bottom: 8px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .area-weekly .header p {
-  color: #666;
+  color: #FFFFFF;
   font-size: 14px;
+  opacity: 0.95;
+  letter-spacing: 0.01em;
 }
 
 .area-weekly .content-wrapper {
-  background: white;
+  background: #FFFFFF;
   padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   margin-bottom: 25px;
-}
-
-.area-weekly .form-section {
-  margin-bottom: 30px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  position: relative;
 }
 
 .area-weekly .form-section h3 {
   color: #1a1a1a;
   font-size: 18px;
   margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #ffd700;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #000000;
+  letter-spacing: -0.01em;
+  font-weight: 600;
 }
 
 .area-weekly .section-desc {
-  color: #666;
+  color: rgba(0, 0, 0, 0.7);
   font-size: 14px;
   margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.area-weekly .form-section {
+  margin-bottom: 30px;
 }
 
 .area-weekly .form-grid {
@@ -68,30 +110,45 @@
   flex-direction: column;
 }
 
+.area-weekly .date-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .area-weekly .form-group label {
-  color: #1a1a1a;
+  color: #000000;
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
+  letter-spacing: 0.02em;
 }
 
 .area-weekly .form-group input,
 .area-weekly .form-group select {
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
   font-size: 14px;
-  transition: border-color 0.3s;
+  background: #FFFFFF;
+  color: #1a1a1a;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.area-weekly .form-group input::placeholder {
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .area-weekly .form-group input:focus,
 .area-weekly .form-group select:focus {
   outline: none;
-  border-color: #ffd700;
+  border-color: #F4CC00;
+  box-shadow: 0 0 0 3px rgba(244, 204, 0, 0.5);
+  background: #FFFFFF;
 }
 
 .area-weekly .btn {
-  padding: 12px 30px;
+  padding: 12px 24px;
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -108,24 +165,45 @@
 }
 
 .area-weekly .btn-primary {
-  background: #ffd700;
-  color: #1a1a1a;
+  background: #000000;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .area-weekly .btn-primary:hover {
-  background: #1a1a1a;
-  color: #ffd700;
-  transform: translateY(-2px);
+  background: #F4CC00;
+  color: #000000;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.area-weekly .btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.area-weekly .btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(244, 204, 0, 0.55);
 }
 
 .area-weekly .btn-secondary {
-  background: #1a1a1a;
-  color: white;
+  background: #FFFFFF;
+  color: #1a1a1a;
+  border: 1px solid rgba(0, 0, 0, 0.18);
 }
 
 .area-weekly .btn-secondary:hover {
-  background: #ffd700;
+  background: #F4CC00;
+  border-color: #000000;
   color: #1a1a1a;
+  transform: translateY(-1px);
+}
+
+.area-weekly .calendar-btn {
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .area-weekly .btn-sm {
@@ -138,40 +216,55 @@
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(28, 46, 74, 0.08);
 }
 
 .area-weekly .reports-table thead {
-  background: #1a1a1a;
-  color: white;
+  background: #000000;
+  color: #FFFFFF;
 }
 
 .area-weekly .reports-table th {
-  padding: 15px;
+  padding: 14px 16px;
   text-align: left;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .area-weekly .reports-table tbody tr {
-  border-bottom: 1px solid #e0e0e0;
-  transition: background 0.2s;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  transition: background 0.2s ease, transform 0.15s ease;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.area-weekly .reports-table tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .area-weekly .reports-table tbody tr:hover {
-  background: #fffef0;
+  background: rgba(244, 204, 0, 0.16);
+  transform: scale(1.001);
 }
 
 .area-weekly .reports-table td {
-  padding: 15px;
+  padding: 14px 16px;
   font-size: 14px;
-  color: #333;
+  color: #1a1a1a;
 }
 
 .area-weekly .empty-state {
   text-align: center;
-  padding: 30px;
-  color: #999;
+  padding: 32px 30px;
+  color: #000000;
+  font-size: 14px;
+  line-height: 1.5;
+  border-radius: 12px;
+  background: #F8F8F8;
+  border: 1px dashed #CCCCCC;
 }
 
 .area-weekly .badge {
@@ -182,18 +275,20 @@
 }
 
 .area-weekly .badge-warning {
-  background: #fff3cd;
-  color: #856404;
+  background: rgba(244, 204, 0, 0.16);
+  color: #000000;
+  border: 1px solid rgba(244, 204, 0, 0.7);
 }
 
 .area-weekly .badge-success {
-  background: #d4edda;
-  color: #155724;
+  background: rgba(34, 197, 94, 0.2);
+  color: #047857;
+  border: 1px solid rgba(34, 197, 94, 0.4);
 }
 
 .area-weekly .btn-view {
-  background: #ffd700;
-  color: #1a1a1a;
+  background: #000000;
+  color: #FFFFFF;
   padding: 8px 16px;
   border-radius: 5px;
   border: none;
@@ -201,34 +296,39 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
 }
 
 .area-weekly .btn-view:hover {
-  background: #1a1a1a;
-  color: #ffd700;
+  background: #F4CC00;
+  color: #000000;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .area-weekly .crud-company-header {
   margin-top: 24px;
   margin-bottom: 12px;
   padding: 12px 16px;
-  background: #1a1a1a;
-  color: #ffd700;
+  background: #000000;
+  color: #FFFFFF;
   border-radius: 6px;
   font-size: 18px;
   font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-left: 4px solid #000000;
 }
 
 .area-weekly .crud-empty-message {
   text-align: center;
   padding: 30px;
-  color: #999;
+  color: #4a5568;
 }
 
 .area-weekly .company-weekly-summary {
   margin-bottom: 15px;
   font-size: 14px;
-  color: #333;
+  color: #1a1a1a;
 }
 
 .area-weekly .company-weekly-summary p {
@@ -240,15 +340,17 @@
   font-size: 18px;
   margin-bottom: 10px;
   padding-bottom: 10px;
-  border-bottom: 2px solid #ffd700;
+  border-bottom: 2px solid #000000;
 }
 
 .area-weekly .histogram-container {
   margin-top: 30px;
   padding: 25px;
-  background: #f9f9f9;
-  border-radius: 10px;
-  border: 2px solid #ffd700;
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  position: relative;
 }
 
 .area-weekly .histogram-container h3 {
@@ -275,14 +377,17 @@
 }
 
 .area-weekly .modal-content {
-  background: white;
+  background: #FFFFFF;
   padding: 24px;
-  border-radius: 10px;
+  border-radius: 16px;
   max-width: 640px;
   width: 95%;
   max-height: 80vh;
   overflow: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32), 0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-left: 4px solid #000000;
+  position: relative;
 }
 
 .area-weekly .modal-content h3 {
@@ -302,4 +407,3 @@
 .area-weekly .modal-edit .form-group:last-of-type {
   margin-bottom: 20px;
 }
-

@@ -8,8 +8,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -22,7 +20,16 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/shift-schedules/**",
+                                "/api/users/**",
+                                "/api/attendance/**",
+                                "/api/weekly-reports/**",
+                                "/api/monthly-reports/**",
+                                "/api/monthly-statistics/**",
+                                "/api/security-officers/**"
+                        ).permitAll()
                         .anyRequest().authenticated())
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration configuration = new CorsConfiguration();

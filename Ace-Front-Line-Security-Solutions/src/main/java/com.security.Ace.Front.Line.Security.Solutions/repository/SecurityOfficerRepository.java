@@ -14,6 +14,8 @@ public interface SecurityOfficerRepository extends JpaRepository<SecurityOfficer
 
     Optional<SecurityOfficer> findBySecurityId(String securityId);
 
+    Optional<SecurityOfficer> findByEmailAddress(String emailAddress);
+
     List<SecurityOfficer> findByAreaManagerId(Long areaManagerId);
 
     List<SecurityOfficer> findByBranch(String branch);

@@ -6,6 +6,7 @@ const MAX_SHIFTS_FOR_OT = 60;
 const OT_HOURS_PER_SHIFT = 3;
 
 interface StatRow {
+  id: number;
   securityId: string;
   officerName: string;
   monthlyShifts: number;
@@ -20,6 +21,11 @@ export default function MonthlyStatistics() {
   });
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [stats, setStats] = useState<StatRow[]>([]);
+
+  const [editRow, setEditRow] = useState<StatRow | null>(null);
+  const [editMonthlyShifts, setEditMonthlyShifts] = useState<number>(0);
+  const [editMonthlyOvertimeHours, setEditMonthlyOvertimeHours] = useState<number>(0);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -62,12 +68,59 @@ export default function MonthlyStatistics() {
     return `${names[mo - 1]} ${year}`;
   })();
 
+  async function handleSaveEdit() {
+    if (!editRow) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/monthly-statistics/${editRow.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          monthlyShifts: editMonthlyShifts,
+          monthlyOvertimeHours: editMonthlyOvertimeHours,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to update monthly statistics.");
+      }
+
+      setEditRow(null);
+      await loadData();
+    } catch (e) {
+      console.error("Error updating monthly statistics:", e);
+      alert("Failed to update. Please try again.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleDeleteRow(row: StatRow) {
+    const confirmed = window.confirm(
+      `Delete monthly statistics for ${row.officerName} (${row.securityId})? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/monthly-statistics/${row.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to delete monthly statistics.");
+      }
+      await loadData();
+    } catch (e) {
+      console.error("Error deleting monthly statistics:", e);
+      alert("Failed to delete. Please try again.");
+    }
+  }
+
   return (
     <div className="area-monthly-stats">
       <div className="header">
         <h2>Monthly Statistics</h2>
         <p>
-          Security ID, monthly shifts, and monthly OT hours (OT = min(shifts, 60) × 3)
+          Monthly shifts are calculated from approved shift assignments. Monthly OT hours come from attendance overtime hours.
         </p>
       </div>
 
@@ -101,38 +154,113 @@ export default function MonthlyStatistics() {
               <th>Officer Name</th>
               <th>Monthly Shifts</th>
               <th>Monthly OT Hours</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="empty-state">
+                <td colSpan={5} className="empty-state">
                   Loading…
                 </td>
               </tr>
             ) : stats.length === 0 ? (
               <tr>
-                <td colSpan={4} className="empty-state">
+                <td colSpan={5} className="empty-state">
                   No officers or no data for {monthLabel}.
                 </td>
               </tr>
             ) : (
               stats.map((row) => (
-                <tr key={row.securityId}>
+                <tr key={row.id}>
                   <td>{row.securityId}</td>
                   <td>{row.officerName}</td>
-                  <td>{row.monthlyShifts}</td>
-                  <td>{row.monthlyOvertimeHours.toFixed(2)}</td>
+                  <td>{Number(row.monthlyShifts ?? 0)}</td>
+                  <td>{Number(row.monthlyOvertimeHours ?? 0).toFixed(2)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ padding: "8px 14px", marginRight: 8 }}
+                      onClick={() => {
+                        setEditRow(row);
+                        setEditMonthlyShifts(row.monthlyShifts);
+                        setEditMonthlyOvertimeHours(row.monthlyOvertimeHours);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{
+                        padding: "8px 14px",
+                        background: "#b71c1c",
+                        color: "#FFFFFF",
+                        marginLeft: 0,
+                      }}
+                      onClick={() => handleDeleteRow(row)}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
         <p className="stats-note">
-          Monthly OT hours = min(monthly shifts, {MAX_SHIFTS_FOR_OT}) × {OT_HOURS_PER_SHIFT}. Maximum
-          shifts used for OT is {MAX_SHIFTS_FOR_OT}.
+          OT hours shown are the total `overtimeHours` recorded in attendance for the selected month.
         </p>
       </div>
+
+      {editRow && (
+        <div className="monthly-edit-overlay" onClick={() => (savingEdit ? null : setEditRow(null))}>
+          <div className="monthly-edit-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Edit monthly statistics</h3>
+            <p style={{ marginBottom: 14 }}>
+              {editRow.officerName} ({editRow.securityId})
+            </p>
+
+            <div className="monthly-edit-form">
+              <label>
+                Monthly Shifts
+                <input
+                  type="number"
+                  min={0}
+                  value={editMonthlyShifts}
+                  onChange={(e) => setEditMonthlyShifts(parseInt(e.target.value, 10) || 0)}
+                />
+              </label>
+              <label>
+                Monthly OT Hours
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={editMonthlyOvertimeHours}
+                  onChange={(e) => setEditMonthlyOvertimeHours(parseFloat(e.target.value) || 0)}
+                />
+              </label>
+            </div>
+
+            <div className="monthly-edit-actions">
+              <button type="button" className="btn btn-primary" onClick={handleSaveEdit} disabled={savingEdit}>
+                {savingEdit ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setEditRow(null)}
+                style={{ padding: "12px 18px", background: "#777777", color: "#FFFFFF", marginLeft: 12 }}
+                disabled={savingEdit}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

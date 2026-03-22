@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Chart } from "chart.js/auto";
 import "./WeeklyReport.css";
+import { hslVar } from "@/lib/utils";
 
 const MANAGER_ID = 1;
 
@@ -89,12 +90,30 @@ export default function WeeklyReport() {
   });
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
+  const lastGeneratedKeyRef = useRef<string>("");
+  const lastCrudGeneratedKeyRef = useRef<string>("");
+
+  const crudWeekDateInputRef = useRef<HTMLInputElement | null>(null);
+  const filterWeekDateInputRef = useRef<HTMLInputElement | null>(null);
+
+  function openDatePicker(ref: React.RefObject<HTMLInputElement>) {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof (el as HTMLInputElement & { showPicker?: () => void }).showPicker === "function") {
+      (el as HTMLInputElement & { showPicker: () => void }).showPicker();
+    } else {
+      el.focus();
+      el.click();
+    }
+  }
 
   async function loadCompanies() {
     try {
-      const res = await fetch(`/api/security-officers/manager/${MANAGER_ID}/companies`);
+      // Load companies from `client_companies` so the selector reflects database reality.
+      const res = await fetch(`/api/shift-schedules/client-companies`);
       const data = await res.json();
-      setCompanies(Array.isArray(data) ? data : []);
+      const names = Array.isArray(data) ? data.map((c) => c?.name).filter(Boolean) : [];
+      setCompanies(names);
     } catch (e) {
       console.error("Error loading companies:", e);
       setCompanies([]);
@@ -125,12 +144,54 @@ export default function WeeklyReport() {
     }
   }
 
+  // When the user selects a company + week date in the filter section,
+  // generate weekly report rows from APPROVED shift scheduling allocations,
+  // then reload the list so those rows show up immediately.
+  useEffect(() => {
+    (async () => {
+      if (!filterCompany || !filterWeekDate) return;
+
+      const key = `${filterCompany}|${filterWeekDate}`;
+      if (lastGeneratedKeyRef.current === key) return;
+      lastGeneratedKeyRef.current = key;
+
+      try {
+        await fetch(
+          `/api/weekly-reports/generate/company?companyName=${encodeURIComponent(
+            filterCompany
+          )}&weekDate=${encodeURIComponent(filterWeekDate)}`,
+          { method: "POST" }
+        );
+        await loadReports();
+      } catch (e) {
+        console.error(e);
+        alert("Failed to generate weekly reports for the selected company/week.");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCompany, filterWeekDate]);
+
   async function loadCrudReports() {
     if (!crudCompany) {
       alert("Please select a company.");
       return;
     }
     try {
+      // Ensure rows exist for the selected company/week by generating from
+      // APPROVED shift allocations. This makes "Load Report" behave like the user expects.
+      if (crudWeekDate) {
+        const key = `${crudCompany}|${crudWeekDate}`;
+        if (lastCrudGeneratedKeyRef.current !== key) {
+          lastCrudGeneratedKeyRef.current = key;
+          await fetch(
+            `/api/weekly-reports/generate/company?companyName=${encodeURIComponent(
+              crudCompany
+            )}&weekDate=${encodeURIComponent(crudWeekDate)}`,
+            { method: "POST" }
+          );
+        }
+      }
+
       let url = `/api/weekly-reports/manager/${MANAGER_ID}/company?companyName=${encodeURIComponent(crudCompany)}`;
       if (crudWeekDate) url += "&weekDate=" + encodeURIComponent(crudWeekDate);
       const res = await fetch(url);
@@ -148,6 +209,14 @@ export default function WeeklyReport() {
     let list = base.slice().filter((r) => r && typeof r === "object");
     if (filterCompany) list = list.filter((r) => r.companyName === filterCompany);
     if (filterOfficerId) list = list.filter((r) => r.securityId === filterOfficerId);
+    if (filterWeekDate) {
+      const wk = getWeekAndYearFromDate(filterWeekDate);
+      if (wk) {
+        list = list.filter(
+          (r) => r.year === wk.year && r.month === wk.month && r.weekNumber === wk.weekNumber
+        );
+      }
+    }
     list.sort((a, b) => (a.year !== b.year ? a.year - b.year : a.weekNumber - b.weekNumber));
     return list;
   })();
@@ -198,6 +267,13 @@ export default function WeeklyReport() {
     }
 
     if (chartInstance.current) chartInstance.current.destroy();
+
+    const primary = hslVar("--primary");
+    const foreground = hslVar("--foreground");
+    const mutedForeground = hslVar("--muted-foreground");
+    const border = hslVar("--border");
+    const tooltipBg = hslVar("--card") || hslVar("--background");
+
     chartInstance.current = new Chart(ctx, {
       type: "bar",
       data: {
@@ -206,16 +282,46 @@ export default function WeeklyReport() {
           {
             label: perOfficer ? "Shifts per Week (Officer)" : "Shifts per Week (Company total)",
             data: dataValues,
-            backgroundColor: "#FFD700",
-            borderColor: "#1a1a1a",
-            borderWidth: 2,
+            backgroundColor: primary || "#F4CC00",
+            borderColor: border || primary || "#111111",
+            hoverBackgroundColor: primary ? primary : "#F4CC00",
+            borderWidth: 1,
+            borderRadius: 8,
+            maxBarThickness: 44,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        plugins: {
+          legend: {
+            labels: {
+              color: mutedForeground || "#666",
+              font: { family: "Public Sans" },
+            },
+          },
+          tooltip: {
+            backgroundColor: tooltipBg || "rgba(255,255,255,0.95)",
+            titleColor: foreground || "#111",
+            bodyColor: mutedForeground || "#444",
+            borderColor: border || "rgba(0,0,0,0.1)",
+            borderWidth: 1,
+            titleFont: { family: "Public Sans", weight: "600" as const },
+            bodyFont: { family: "Public Sans" },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: border ? border : "rgba(0,0,0,0.06)" },
+            ticks: { color: mutedForeground || "#666", font: { family: "Public Sans" } },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: border ? border : "rgba(0,0,0,0.06)" },
+            ticks: { stepSize: 1, color: mutedForeground || "#666", font: { family: "Public Sans" } },
+          },
+        },
       },
     });
   }
@@ -322,9 +428,29 @@ export default function WeeklyReport() {
   }
 
   function handleCrudGenerateClick() {
-    loadCrudReports();
-    loadReports();
-    if (crudCompany && crudWeekDate) alert("Weekly reports loaded for " + crudCompany + ".");
+    (async () => {
+      if (!crudCompany || !crudWeekDate) {
+        alert("Please select a company and a week date first.");
+        return;
+      }
+
+      try {
+        // Generate weekly report rows based on APPROVED shift scheduling.
+        await fetch(
+          `/api/weekly-reports/generate/company?companyName=${encodeURIComponent(
+            crudCompany
+          )}&weekDate=${encodeURIComponent(crudWeekDate)}`,
+          { method: "POST" }
+        );
+
+        await loadCrudReports();
+        await loadReports();
+        alert(`Weekly reports generated for ${crudCompany}.`);
+      } catch (e) {
+        console.error(e);
+        alert("Failed to generate weekly report for this company/week.");
+      }
+    })();
   }
 
   const crudTableRows = (() => {
@@ -403,11 +529,21 @@ export default function WeeklyReport() {
             </div>
             <div className="form-group">
               <label>Week Date</label>
-              <input
-                type="date"
-                value={crudWeekDate}
-                onChange={(e) => setCrudWeekDate(e.target.value)}
-              />
+              <div className="date-input-wrapper">
+                <input
+                  ref={crudWeekDateInputRef}
+                  type="date"
+                  value={crudWeekDate}
+                  onChange={(e) => setCrudWeekDate(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn calendar-btn"
+                  onClick={() => openDatePicker(crudWeekDateInputRef)}
+                >
+                  📅
+                </button>
+              </div>
             </div>
           </div>
           <button type="button" className="btn btn-primary" onClick={loadCrudReports}>
@@ -514,11 +650,21 @@ export default function WeeklyReport() {
             </div>
             <div className="form-group">
               <label>Week Date *</label>
-              <input
-                type="date"
-                value={filterWeekDate}
-                onChange={(e) => setFilterWeekDate(e.target.value)}
-              />
+              <div className="date-input-wrapper">
+                <input
+                  ref={filterWeekDateInputRef}
+                  type="date"
+                  value={filterWeekDate}
+                  onChange={(e) => setFilterWeekDate(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn calendar-btn"
+                  onClick={() => openDatePicker(filterWeekDateInputRef)}
+                >
+                  📅
+                </button>
+              </div>
             </div>
           </div>
           <button

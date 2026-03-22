@@ -1,14 +1,142 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./Dashboard.css";
 
-interface Manager {
-  fullName: string;
-  employeeId: string;
-  branch: string;
+const MANAGER_ID = 1;
+
+interface AttendanceSummary {
+  id: number;
+  securityOfficerId: number;
+  securityOfficerName: string;
+  securityId: string;
+  attendanceDate: string;
+  overtimeHours: number | null;
+  isShiftCounted: boolean | null;
+}
+
+interface WeeklyReportSummary {
+  id: number;
+  weekNumber: number;
+  month: number | null;
+  year: number;
+}
+
+interface DashboardStats {
+  activeOfficers: number;
+  monthShifts: number;
+  overtimeHours: number;
+  weeklyReportsThisWeek: number;
+  loading: boolean;
+  error: string | null;
+}
+
+function getTodayIso(): string {
+  return new Date().toISOString().split("T")[0]!;
+}
+
+function getMonthRangeIso(): { start: string; end: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const toIso = (d: Date) => d.toISOString().split("T")[0]!;
+  return { start: toIso(start), end: toIso(end) };
+}
+
+function getCurrentWeekKey() {
+  const today = getTodayIso();
+  const d = new Date(today + "T12:00:00");
+  const year = d.getFullYear();
+  const month = d.getMonth(); // 0-based
+  const dayOfMonth = d.getDate();
+  const weekNumber = Math.min(4, Math.floor((dayOfMonth - 1) / 7) + 1);
+  return { weekNumber, month: month + 1, year };
 }
 
 export default function AreaManagerDashboard() {
-  const manager: Manager | null = null;
+  const [stats, setStats] = useState<DashboardStats>({
+    activeOfficers: 0,
+    monthShifts: 0,
+    overtimeHours: 0,
+    weeklyReportsThisWeek: 0,
+    loading: true,
+    error: null,
+  });
+
+  useEffect(() => {
+    async function loadStats() {
+      setStats((s) => ({ ...s, loading: true, error: null }));
+      try {
+        const { start, end } = getMonthRangeIso();
+        const todayIso = getTodayIso();
+
+        const [attendanceRes, weeklyRes] = await Promise.all([
+          fetch(
+            `/api/attendance/manager?managerId=${encodeURIComponent(
+              MANAGER_ID
+            )}&startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`
+          ),
+          fetch(`/api/weekly-reports/manager/${MANAGER_ID}`),
+        ]);
+
+        let attendance: AttendanceSummary[] = [];
+        if (attendanceRes.ok) {
+          const raw = await attendanceRes.json();
+          attendance = Array.isArray(raw) ? raw : [];
+        }
+
+        let weeklyReports: WeeklyReportSummary[] = [];
+        if (weeklyRes.ok) {
+          const raw = await weeklyRes.json();
+          weeklyReports = Array.isArray(raw) ? raw : [];
+        }
+
+        const activeOfficerIds = new Set(
+          attendance
+            .filter((a) => a.attendanceDate === todayIso)
+            .map((a) => a.securityId || String(a.securityOfficerId))
+        );
+
+        const monthShifts = attendance.reduce(
+          (sum, a) => (a.isShiftCounted ? sum + 1 : sum),
+          0
+        );
+
+        const overtimeHours = attendance.reduce(
+          (sum, a) => sum + (a.overtimeHours ?? 0),
+          0
+        );
+
+        const currentWeek = getCurrentWeekKey();
+        const weeklyReportsThisWeek = weeklyReports.filter(
+          (w) =>
+            w.weekNumber === currentWeek.weekNumber &&
+            w.year === currentWeek.year &&
+            (w.month == null || w.month === currentWeek.month)
+        ).length;
+
+        setStats({
+          activeOfficers: activeOfficerIds.size,
+          monthShifts,
+          overtimeHours,
+          weeklyReportsThisWeek,
+          loading: false,
+          error: null,
+        });
+      } catch (e) {
+        console.error("Error loading dashboard stats:", e);
+        setStats((s) => ({
+          ...s,
+          loading: false,
+          error: "Failed to load live statistics.",
+        }));
+      }
+    }
+
+    loadStats();
+  }, []);
+
+  const displayNumber = (value: number) =>
+    stats.loading ? "…" : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
   return (
     <div className="area-dashboard">
@@ -25,8 +153,8 @@ export default function AreaManagerDashboard() {
             </svg>
           </div>
           <div className="card-title">Active Officers</div>
-          <div className="card-value">24</div>
-          <div className="card-description">Currently on duty</div>
+          <div className="card-value">{displayNumber(stats.activeOfficers)}</div>
+          <div className="card-description">With attendance recorded today</div>
         </div>
 
         <div className="dashboard-card">
@@ -40,8 +168,8 @@ export default function AreaManagerDashboard() {
             </svg>
           </div>
           <div className="card-title">This Month&apos;s Shifts</div>
-          <div className="card-value">342</div>
-          <div className="card-description">Out of 1440 max shifts</div>
+          <div className="card-value">{displayNumber(stats.monthShifts)}</div>
+          <div className="card-description">Counted shifts in this month</div>
         </div>
 
         <div className="dashboard-card">
@@ -54,8 +182,10 @@ export default function AreaManagerDashboard() {
             </svg>
           </div>
           <div className="card-title">Overtime Hours</div>
-          <div className="card-value">87.5</div>
-          <div className="card-description">This month</div>
+          <div className="card-value">
+            {stats.loading ? "…" : stats.overtimeHours.toFixed(1)}
+          </div>
+          <div className="card-description">Overtime recorded this month</div>
         </div>
 
         <div className="dashboard-card">
@@ -69,8 +199,10 @@ export default function AreaManagerDashboard() {
             </svg>
           </div>
           <div className="card-title">Weekly Reports</div>
-          <div className="card-value">8</div>
-          <div className="card-description">Generated this week</div>
+          <div className="card-value">
+            {displayNumber(stats.weeklyReportsThisWeek)}
+          </div>
+          <div className="card-description">Generated in the current week</div>
         </div>
       </div>
 

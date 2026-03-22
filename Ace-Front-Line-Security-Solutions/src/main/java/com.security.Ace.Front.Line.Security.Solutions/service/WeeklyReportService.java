@@ -4,16 +4,22 @@ import com.security.Ace.Front.Line.Security.Solutions.dto.WeeklyReportDTO;
 import com.security.Ace.Front.Line.Security.Solutions.entity.AreaManager;
 import com.security.Ace.Front.Line.Security.Solutions.entity.Attendance;
 import com.security.Ace.Front.Line.Security.Solutions.entity.SecurityOfficer;
+import com.security.Ace.Front.Line.Security.Solutions.entity.ShiftAssignment;
+import com.security.Ace.Front.Line.Security.Solutions.entity.User;
 import com.security.Ace.Front.Line.Security.Solutions.entity.WeeklyReport;
 import com.security.Ace.Front.Line.Security.Solutions.repository.AreaManagerRepository;
 import com.security.Ace.Front.Line.Security.Solutions.repository.AttendanceRepository;
+import com.security.Ace.Front.Line.Security.Solutions.repository.ShiftAssignmentRepository;
 import com.security.Ace.Front.Line.Security.Solutions.repository.SecurityOfficerRepository;
+import com.security.Ace.Front.Line.Security.Solutions.repository.UserRepository;
 import com.security.Ace.Front.Line.Security.Solutions.repository.WeeklyReportRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,8 +38,109 @@ public class WeeklyReportService {
     @Autowired
     private AreaManagerRepository areaManagerRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+
+    /**
+     * Generates/updates weekly report totals based on the *actual shift assignments*
+     * for a schedule.
+     *
+     * This is what makes weekly reports reflect the shift scheduling allocations
+     * (client company + assigned officers on each date) instead of relying on attendance rows.
+     */
+    @Transactional
+    public void upsertWeeklyReportsFromShiftSchedule(Long scheduleId, String areaManagerEmail) {
+        if (areaManagerEmail == null || areaManagerEmail.isBlank()) {
+            throw new RuntimeException("Area manager email is required to generate weekly reports.");
+        }
+
+        AreaManager manager = areaManagerRepository.findByEmail(areaManagerEmail.trim())
+                .orElseGet(() -> {
+                    User user = userRepository.findByEmail(areaManagerEmail.trim())
+                            .orElseThrow(() -> new RuntimeException("Area Manager not found in users table for email: " + areaManagerEmail));
+
+                    if (!"AREA_MANAGER".equals(user.getRole())) {
+                        throw new RuntimeException("User is not AREA_MANAGER for email: " + areaManagerEmail);
+                    }
+
+                    if (user.getBranch() == null) {
+                        throw new RuntimeException("AREA_MANAGER user has no branch_id in users table for email: " + areaManagerEmail);
+                    }
+
+                    // Create a minimal AreaManager row so weekly reports can reference it.
+                    // This matches your current architecture where login/session is on `users` table.
+                    AreaManager created = new AreaManager();
+                    created.setEmail(user.getEmail());
+                    created.setPassword(user.getPassword());
+                    created.setBranch(user.getBranch());
+                    created.setFullName(user.getFullName() != null ? user.getFullName() : user.getEmail());
+                    created.setEmployeeId(user.getUsername() != null ? user.getUsername() : String.valueOf(user.getId()));
+                    created.setContactNumber(user.getMobileNumber() != null ? user.getMobileNumber() : "0000000000");
+                    created.setDesignation(user.getDesignation() != null ? user.getDesignation() : "Area Manager");
+                    created.setStatus("ACTIVE");
+                    return areaManagerRepository.save(created);
+                });
+
+        List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShift_Schedule_Id(scheduleId);
+        if (assignments.isEmpty()) {
+            return;
+        }
+
+        // securityOfficerId|year|month|weekNumber -> number of assignment rows (DAY+NIGHT can be 2 on same date)
+        java.util.Map<String, Integer> shiftCounts = new java.util.HashMap<>();
+        java.util.Map<String, LocalDate> weekStartByKey = new java.util.HashMap<>();
+
+        for (ShiftAssignment a : assignments) {
+            SecurityOfficer securityOfficer = a.getSecurityOfficer();
+            LocalDate date = a.getShift().getShiftDate();
+            if (securityOfficer == null || date == null) continue;
+
+            int year = date.getYear();
+            int month = date.getMonthValue();
+            int dayOfMonth = date.getDayOfMonth();
+            int weekNumber = Math.min(4, (dayOfMonth - 1) / 7 + 1);
+
+            int weekStartDay = (weekNumber - 1) * 7 + 1;
+            LocalDate weekStart = LocalDate.of(year, month, weekStartDay);
+
+            Long securityOfficerId = securityOfficer.getId();
+            String key = securityOfficerId + "|" + year + "|" + month + "|" + weekNumber;
+            shiftCounts.merge(key, 1, Integer::sum);
+            weekStartByKey.putIfAbsent(key, weekStart);
+        }
+
+        String clientCompanyName = assignments.get(0).getShift().getSchedule().getClientCompany().getName();
+
+        for (String key : shiftCounts.keySet()) {
+            LocalDate weekStart = weekStartByKey.get(key);
+            String[] parts = key.split("\\|");
+            Long securityOfficerId = Long.parseLong(parts[0]);
+            securityOfficerRepository.findById(securityOfficerId)
+                    .orElseThrow(() -> new RuntimeException("Security officer not found: " + securityOfficerId));
+            // Shifts from schedule; hours/OT from attendance rows for those scheduled days.
+            generateWeeklyReportInternal(securityOfficerId, manager.getId(), weekStart, clientCompanyName);
+        }
+    }
+
     @Transactional
     public WeeklyReportDTO generateWeeklyReport(Long officerId, Long managerId, LocalDate weekDate) {
+        SecurityOfficer officer = securityOfficerRepository.findById(officerId)
+                .orElseThrow(() -> new RuntimeException("Security Officer not found"));
+
+        // Default generation (officer-level) uses the officer's assigned company.
+        // Company-level generation uses the schedule's client company name.
+        String clientCompanyName = officer.getAssignedCompany();
+        return generateWeeklyReportInternal(officerId, managerId, weekDate, clientCompanyName);
+    }
+
+    @Transactional
+    protected WeeklyReportDTO generateWeeklyReportInternal(Long officerId,
+                                                              Long managerId,
+                                                              LocalDate weekDate,
+                                                              String clientCompanyName) {
         SecurityOfficer officer = securityOfficerRepository.findById(officerId)
                 .orElseThrow(() -> new RuntimeException("Security Officer not found"));
 
@@ -51,31 +158,28 @@ public class WeeklyReportService {
         LocalDate weekStart = LocalDate.of(year, month, weekStartDay);
         LocalDate weekEnd = LocalDate.of(year, month, weekEndDay);
 
-        // Get attendance records for the week
-        List<Attendance> attendances = attendanceRepository
-                .findBySecurityOfficerIdAndAttendanceDateBetween(officerId, weekStart, weekEnd);
+        // Generate totals from shift assignments (not attendance).
+        // Filter by the selected client company so totals match the selected company.
+        // Note: this returns one row per assignment record. If the officer is assigned to both
+        // DAY and NIGHT on the same date, the date can appear twice (which matches "shift" count).
+        List<LocalDate> assignedShiftDates = shiftAssignmentRepository
+                .findWorkingDatesByOfficerAndCompanyAndDateRange(officerId, clientCompanyName, weekStart, weekEnd);
 
-        // Calculate totals
-        int totalShifts = (int) attendances.stream()
-                .filter(Attendance::getIsShiftCounted)
-                .count();
+        int totalShifts = assignedShiftDates == null ? 0 : assignedShiftDates.size();
+        List<LocalDate> distinctScheduleDates = distinctDates(assignedShiftDates);
+        double totalHoursWorked = sumAttendanceHoursForScheduledDates(officerId, distinctScheduleDates);
+        double totalOvertimeHours = sumAttendanceOvertimeForScheduledDates(officerId, distinctScheduleDates);
 
-        double totalOvertimeHours = attendances.stream()
-                .mapToDouble(a -> a.getOvertimeHours() != null ? a.getOvertimeHours() : 0.0)
-                .sum();
-        // Cap weekly OT at 42 hours
-        if (totalOvertimeHours > 42.0) {
-            totalOvertimeHours = 42.0;
-        }
-
-        double totalHoursWorked = attendances.stream()
-                .mapToDouble(a -> a.getHoursWorked() != null ? a.getHoursWorked() : 0.0)
-                .sum();
-
-        // Check if report already exists (by officer, year, month, week of month)
+        // Check if report already exists (by officer, company, year, month, week of month).
+        // For older rows where `clientCompanyName` might be NULL, fall back to the
+        // old key (without client company) and then set the company value.
         WeeklyReport report = weeklyReportRepository
-                .findBySecurityOfficerIdAndYearAndMonthAndWeekNumber(officerId, year, month, weekNumber)
-                .orElse(new WeeklyReport());
+                .findBySecurityOfficerIdAndYearAndMonthAndWeekNumberAndClientCompanyName(
+                        officerId, year, month, weekNumber, clientCompanyName)
+                .orElseGet(() -> weeklyReportRepository
+                        .findBySecurityOfficerIdAndYearAndMonthAndWeekNumber(
+                                officerId, year, month, weekNumber)
+                        .orElse(new WeeklyReport()));
 
         report.setSecurityOfficer(officer);
         report.setAreaManager(manager);
@@ -84,6 +188,7 @@ public class WeeklyReportService {
         report.setYear(year);
         report.setWeekStartDate(weekStart);
         report.setWeekEndDate(weekEnd);
+        report.setClientCompanyName(clientCompanyName);
         report.setTotalShifts(totalShifts);
         report.setTotalOvertimeHours(totalOvertimeHours);
         report.setTotalHoursWorked(totalHoursWorked);
@@ -102,11 +207,38 @@ public class WeeklyReportService {
     public List<WeeklyReportDTO> generateWeeklyReportsForCompany(Long managerId,
                                                                  String companyName,
                                                                  LocalDate weekDate) {
-        List<SecurityOfficer> officers = securityOfficerRepository
-                .findActiveByManagerAndCompany(managerId, companyName);
+        AreaManager manager = areaManagerRepository.findById(managerId)
+                .orElseThrow(() -> new RuntimeException("Area Manager not found"));
+        if (manager.getBranch() == null) {
+            throw new RuntimeException("Area manager is not assigned to any branch");
+        }
+
+        int year = weekDate.getYear();
+        int month = weekDate.getMonthValue();
+        int dayOfMonth = weekDate.getDayOfMonth();
+        int weekNumber = Math.min(4, (dayOfMonth - 1) / 7 + 1);
+
+        int weekStartDay = (weekNumber - 1) * 7 + 1;
+        int lastDayOfMonth = LocalDate.of(year, month, 1).lengthOfMonth();
+        int weekEndDay = weekNumber < 4 ? weekNumber * 7 : lastDayOfMonth;
+
+        LocalDate weekStart = LocalDate.of(year, month, weekStartDay);
+        LocalDate weekEnd = LocalDate.of(year, month, weekEndDay);
+
+        // Build report rows from APPROVED shift allocations, filtered to the Area Manager's branch.
+        // Do NOT rely on SecurityOfficer.areaManager mapping, because in your flow weekly reports
+        // should follow the schedule approvals (approved schedule belongs to the manager/branch),
+        // not the officer's historical areaManager FK.
+        List<SecurityOfficer> officers = shiftAssignmentRepository
+                .findDistinctOfficersByBranchAndCompanyAndDateRange(
+                        manager.getBranch().getId(),
+                        companyName,
+                        weekStart,
+                        weekEnd
+                );
 
         return officers.stream()
-                .map(officer -> generateWeeklyReport(officer.getId(), managerId, weekDate))
+                .map(officer -> generateWeeklyReportInternal(officer.getId(), managerId, weekDate, companyName))
                 .collect(Collectors.toList());
     }
 
@@ -185,12 +317,39 @@ public class WeeklyReportService {
         weeklyReportRepository.deleteById(id);
     }
 
+    private static List<LocalDate> distinctDates(List<LocalDate> dates) {
+        if (dates == null || dates.isEmpty()) {
+            return List.of();
+        }
+        return new ArrayList<>(new LinkedHashSet<>(dates));
+    }
+
+    private double sumAttendanceHoursForScheduledDates(Long officerId, List<LocalDate> scheduledDates) {
+        if (scheduledDates == null || scheduledDates.isEmpty()) {
+            return 0.0;
+        }
+        Double v = attendanceRepository.sumHoursWorkedByOfficerOnDates(officerId, scheduledDates);
+        return v != null ? v : 0.0;
+    }
+
+    private double sumAttendanceOvertimeForScheduledDates(Long officerId, List<LocalDate> scheduledDates) {
+        if (scheduledDates == null || scheduledDates.isEmpty()) {
+            return 0.0;
+        }
+        Double v = attendanceRepository.sumOvertimeHoursByOfficerOnDates(officerId, scheduledDates);
+        return v != null ? v : 0.0;
+    }
+
     private WeeklyReportDTO convertToDTO(WeeklyReport report) {
         WeeklyReportDTO dto = new WeeklyReportDTO();
         dto.setId(report.getId());
         dto.setSecurityOfficerName(report.getSecurityOfficer().getFullName());
         dto.setSecurityId(report.getSecurityOfficer().getSecurityId());
-        dto.setCompanyName(report.getSecurityOfficer().getAssignedCompany());
+        dto.setCompanyName(
+                report.getClientCompanyName() != null
+                        ? report.getClientCompanyName()
+                        : report.getSecurityOfficer().getAssignedCompany()
+        );
         dto.setBranch(report.getSecurityOfficer().getBranch());
         dto.setTotalShifts(report.getTotalShifts());
         dto.setTotalOvertimeHours(report.getTotalOvertimeHours());

@@ -94,7 +94,9 @@ public class MonthlyReportService {
         dto.setAdditionalNotes(report.getAdditionalNotes());
         dto.setAreaManagerName(report.getAreaManager().getFullName());
         dto.setAreaManagerEmployeeId(report.getAreaManager().getEmployeeId());
-        dto.setBranch(report.getAreaManager().getBranch());
+        dto.setBranch(report.getAreaManager().getBranch() != null
+                ? report.getAreaManager().getBranch().getBranchName()
+                : null);
         dto.setGeneratedDate(report.getGeneratedDate());
         dto.setStatus(report.getStatus());
         return dto;

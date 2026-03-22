@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import heroImage from "@/assets/hero-security.jpg";
-import eagleImage from "@/assets/eagle-vision.jpg";
 import logoImage from "@/assets/logo.png";
 import companyProfile from "@/assets/company-profile.png";
 import teamPhoto from "@/assets/team-photo.jpg";
