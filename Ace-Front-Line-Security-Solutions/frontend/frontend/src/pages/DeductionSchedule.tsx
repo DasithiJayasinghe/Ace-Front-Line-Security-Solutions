@@ -10,18 +10,16 @@ import { loanService, type LoanRequest } from "@/services/loanService";
 import { loanDeductionService, type LoanDeduction } from "@/services/loanDeductionService";
 import { authService } from "@/services/authService";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 
 export default function DeductionSchedule() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuthenticatedUser();
   const [myLoans, setMyLoans] = useState<LoanRequest[]>([]);
   const [deductions, setDeductions] = useState<LoanDeduction[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  const user = localStorage.getItem("user")
-    ? JSON.parse(localStorage.getItem("user")!)
-    : { fullName: "Security Officer", username: "officer", userId: 0 };
 
   useEffect(() => {
     fetchData();

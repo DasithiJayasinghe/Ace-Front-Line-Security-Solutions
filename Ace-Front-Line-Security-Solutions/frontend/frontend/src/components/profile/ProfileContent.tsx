@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import GenerateIDCard from "@/components/profile/GenerateIDCard";
+import PaysheetHistoryTab from "@/components/profile/PaysheetHistoryTab";
 import { loanService } from "@/services/loanService";
 import { advanceService } from "@/services/advanceService";
 
@@ -232,6 +233,15 @@ const ProfileContent = ({ user, activeView }: ProfileContentProps) => {
     return (
       <div className="flex-1 overflow-auto p-6">
         <GenerateIDCard user={user} />
+      </div>
+    );
+  }
+
+  // Show Paysheet History view
+  if (activeView === "paysheet-history") {
+    return (
+      <div className="flex-1 overflow-auto p-6">
+        <PaysheetHistoryTab />
       </div>
     );
   }

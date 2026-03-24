@@ -84,7 +84,10 @@ export default function admin_PayrollApprovalPage() {
     setSubmitting(true);
     try {
       if (actionType === "approve") {
-        await admin_payrollService.approvePayroll(selectedPayroll.id, remarks);
+        await admin_payrollService.approvePayroll(selectedPayroll.id, { 
+          approvalRemarks: remarks,
+          allowances: selectedPayroll.allowances 
+        });
         toast.success("Payroll approved successfully");
       } else {
         await admin_payrollService.rejectPayroll(selectedPayroll.id, remarks);
@@ -319,6 +322,32 @@ export default function admin_PayrollApprovalPage() {
                   </div>
                 </div>
               )}
+
+              {/* Allowance Edit (Director only) */}
+              <div className="space-y-2">
+                <Label htmlFor="editAllowance">Edit Allowance (Optional)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="editAllowance"
+                    type="number"
+                    step="0.01"
+                    defaultValue={selectedPayroll.allowances}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setSelectedPayroll({...selectedPayroll, allowances: val});
+                      }
+                    }}
+                    placeholder="0.00"
+                  />
+                  <div className="flex flex-col justify-center">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold">New Net Salary</p>
+                    <p className="font-bold text-primary">
+                      {formatCurrency(selectedPayroll.basicSalary + (selectedPayroll.otAmount || 0) + selectedPayroll.allowances - (selectedPayroll.loanDeduction + selectedPayroll.advanceDeduction + selectedPayroll.otherDeductions))}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               {/* Remarks/Reason Field */}
               {actionType && (

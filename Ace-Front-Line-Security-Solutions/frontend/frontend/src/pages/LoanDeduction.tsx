@@ -8,16 +8,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 
 const LoanDeductions = () => {
   const navigate = useNavigate();
+  const { user, isLoading: userLoading } = useAuthenticatedUser();
   const [deductions, setDeductions] = useState<LoanDeduction[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedLoanId, setExpandedLoanId] = useState<number | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
-
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : { fullName: "Account Executive", userId: 0 };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -28,11 +27,7 @@ const LoanDeductions = () => {
     navigate("/staff-login");
   };
 
-  useEffect(() => {
-    if (!localStorage.getItem("token")) {
-      navigate("/staff-login");
-      return;
-    }
+  const fetchDeductions = () => {
     loanDeductionService.getAllDeductions()
       .then(setDeductions)
       .catch((err: any) => toast({
@@ -41,14 +36,23 @@ const LoanDeductions = () => {
         variant: "destructive",
       }))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      navigate("/staff-login");
+      return;
+    }
+    fetchDeductions();
   }, []);
 
   const handleMarkPaid = async (id: number) => {
     setProcessingId(id);
     try {
       await loanDeductionService.markAsPaid(id);
-      setDeductions(prev => prev.map(d => d.id === id ? { ...d, status: "PAID" } : d));
-      toast({ title: "Deduction Marked Paid", description: "Deduction has been recorded as paid." });
+      toast({ title: "Deduction Marked Paid", description: "Deduction has been recorded as paid. The applicant has been notified." });
+      // Re-fetch to reflect any schedule removals (loan fully repaid)
+      fetchDeductions();
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to mark as paid", variant: "destructive" });
     } finally {
@@ -74,10 +78,10 @@ const LoanDeductions = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <DashboardHeader
-        userName={user.fullName}
+        userName={user?.fullName || "Account Executive"}
         userRole="Account Executive"
         onLogout={handleLogout}
-        userId={user.userId || user.id || 0}
+        userId={user?.userId || 0}
         backendRole="ACCOUNT_EXECUTIVE"
         profilePath="/account-executive/profile"
       />

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, DollarSign, TrendingUp, Award, User, LogOut, Menu, X, Shirt, Calendar, Check, AlertCircle, XCircle, Loader, FileText } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,18 +13,14 @@ import { notificationService } from "@/services/notificationService";
 import { addNotification } from "@/lib/notifications";
 import DashboardHeader from "@/components/DashboardHeader";
 import ProfilePage from "@/pages/ProfilePage";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 
 export default function ExecutiveOfficerDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isLoading } = useAuthenticatedUser();
   const isProfile = location.pathname.endsWith("/profile");
-
-  // get user data
-  const user =
-    localStorage.getItem("user")
-      ? JSON.parse(localStorage.getItem("user")!)
-      : { fullName: "Executive Officer", username: "executive_officer", userId: 0, role: "EXECUTIVE_OFFICER" };
 
   // new states
   // make sure every loan in the array has a defined `user`
@@ -131,6 +127,31 @@ export default function ExecutiveOfficerDashboard() {
       return () => clearInterval(interval);
     }
   }, [activeItem]);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      toast({
+        title: "Error",
+        description: "User data could not be loaded. Please log in again.",
+        variant: "destructive",
+      });
+      navigate("/staff-login");
+    }
+  }, [isLoading, user, toast, navigate]);
+
+  // Show loading state while user data is being fetched
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Ensure user is loaded before rendering
+  if (!user) {
+    return null;
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token");

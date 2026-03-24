@@ -11,7 +11,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import DashboardCard from "@/components/DashboardCard";
 import ProfilePage from "@/pages/ProfilePage";
 
-type MainTabType = "dashboard" | "payroll" | "invoices" | "reports" | "loan-approvals";
+type MainTabType = "dashboard" | "payroll" | "invoices" | "reports";
 type PayrollCategoryType = "admin" | "security";
 type InvoicesSubTab = "invoices" | "payments" | "deductions";
 
@@ -91,12 +91,6 @@ export default function AccountantDashboard() {
       description: "View and generate comprehensive financial reports",
       onClick: () => setActiveMainTab("reports"),
     },
-    {
-      icon: CreditCard,
-      title: "Loan Deductions",
-      description: "View and process monthly loan deduction schedules",
-      onClick: () => setActiveMainTab("loan-approvals"),
-    },
   ];
 
   if (isProfile) {
@@ -135,57 +129,42 @@ export default function AccountantDashboard() {
           <nav className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
             <button
               onClick={() => setActiveMainTab("dashboard")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                activeMainTab === "dashboard"
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activeMainTab === "dashboard"
+                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
+                }`}
             >
               Dashboard
             </button>
             <button
               onClick={() => setActiveMainTab("payroll")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                activeMainTab === "payroll"
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activeMainTab === "payroll"
+                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
+                }`}
             >
               <DollarSign className="h-4 w-4" />
               Payroll
             </button>
             <button
               onClick={() => setActiveMainTab("invoices")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                activeMainTab === "invoices"
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activeMainTab === "invoices"
+                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
+                }`}
             >
               <FileText className="h-4 w-4" />
               Invoices
             </button>
             <button
               onClick={() => setActiveMainTab("reports")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                activeMainTab === "reports"
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activeMainTab === "reports"
+                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
+                }`}
             >
               <BarChart3 className="h-4 w-4" />
               Reports
-            </button>
-            <button
-              onClick={() => setActiveMainTab("loan-approvals")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                activeMainTab === "loan-approvals"
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
-              }`}
-            >
-              <Zap className="h-4 w-4" />
-              Loan Approvals
             </button>
           </nav>
         </div>
@@ -261,21 +240,19 @@ export default function AccountantDashboard() {
             <div className="flex gap-3 border-b border-border pb-6">
               <button
                 onClick={() => setActivePayrollCategory("admin")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-                  activePayrollCategory === "admin"
-                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${activePayrollCategory === "admin"
+                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
+                  }`}
               >
                 Admin Personnel
               </button>
               <button
                 onClick={() => setActivePayrollCategory("security")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-                  activePayrollCategory === "security"
-                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${activePayrollCategory === "security"
+                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-border/80 hover:bg-card/50"
+                  }`}
               >
                 Security Force
               </button>
@@ -285,22 +262,21 @@ export default function AccountantDashboard() {
             <div className="flex gap-2 border-b border-border pb-4 overflow-x-auto">
               {payrollSubTabs
                 .filter(tab => {
-                  // Both categories have all tabs available
+                  if (tab.id === "loan" && activePayrollCategory === "admin") return false;
                   return true;
                 })
                 .map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActivePayrollTab(tab.id as PayrollSubTab)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                    activePayrollTab === tab.id
+                  <button
+                    key={tab.id}
+                    onClick={() => setActivePayrollTab(tab.id as PayrollSubTab)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activePayrollTab === tab.id
                       ? "bg-primary/15 text-primary border-primary/40 shadow-sm"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/60"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                      }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
             </div>
 
             {/* Content */}
@@ -325,11 +301,10 @@ export default function AccountantDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveInvoicesTab(tab.id as InvoicesSubTab)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                    activeInvoicesTab === tab.id
-                      ? "bg-primary/15 text-primary border-primary/40 shadow-sm"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/60"
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activeInvoicesTab === tab.id
+                    ? "bg-primary/15 text-primary border-primary/40 shadow-sm"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/60"
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -347,17 +322,6 @@ export default function AccountantDashboard() {
               <p className="text-muted-foreground">View and generate comprehensive financial reports</p>
             </div>
             <ReportsContent />
-          </div>
-        )}
-
-        {/* Loan Approvals View */}
-        {activeMainTab === "loan-approvals" && (
-          <div className="space-y-8">
-            <div className="pb-4">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Loan Approvals & Deductions</h1>
-              <p className="text-muted-foreground">View and process monthly loan deduction schedules</p>
-            </div>
-            <LoanApprovalsContent />
           </div>
         )}
       </main>

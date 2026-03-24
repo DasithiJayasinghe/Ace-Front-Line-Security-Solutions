@@ -10,12 +10,17 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  ArrowUpRight,
+  ArrowDownRight,
+  Banknote,
+  CircleCheck,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import DashboardHeader from "@/components/DashboardHeader";
 import DashboardCard from "@/components/DashboardCard";
 import ProfilePage from "@/pages/ProfilePage";
+import PayrollApprovalContent from "@/pages/PayrollApprovalContent";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { loanService, type LoanRequest } from "@/services/loanService";
@@ -23,6 +28,8 @@ import { advanceService, type AdvanceRequest } from "@/services/advanceService";
 import { leaveService, type LeaveRequest } from "@/services/leaveService";
 import { paysheetService, type Paysheet } from "@/services/paysheetService";
 import { dashboardService } from "@/services/dashboardService";
+import { loanDeductionService } from "@/services/loanDeductionService";
+import UserDirectory from "@/pages/UserDirectory";
 
 type TabType =
   | "dashboard"
@@ -30,6 +37,7 @@ type TabType =
   | "salary-trend"
   | "leave-approval"
   | "loan-advance"
+  | "payroll-approval"
   | "registration-list";
 
 export default function DirectorDashboard() {
@@ -46,6 +54,7 @@ export default function DirectorDashboard() {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [paysheets, setPaysheets] = useState<Paysheet[]>([]);
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loanStats, setLoanStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -67,13 +76,15 @@ export default function DirectorDashboard() {
       advanceService.getAllAdvances(),
       leaveService.getAllLeaves(),
       paysheetService.getAllPaysheets(),
+      loanDeductionService.getDeductionStatistics(),
     ])
-      .then(([dashRes, loansRes, advRes, leaveRes, payRes]) => {
+      .then(([dashRes, loansRes, advRes, leaveRes, payRes, loanStatsRes]) => {
         if (dashRes.status === "fulfilled") setDashboardData(dashRes.value);
         if (loansRes.status === "fulfilled") setLoans(loansRes.value);
         if (advRes.status === "fulfilled") setAdvances(advRes.value);
         if (leaveRes.status === "fulfilled") setLeaves(leaveRes.value);
         if (payRes.status === "fulfilled") setPaysheets(payRes.value);
+        if (loanStatsRes.status === "fulfilled") setLoanStats(loanStatsRes.value);
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -92,8 +103,9 @@ export default function DirectorDashboard() {
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" as TabType },
     { icon: FileText, label: "Monthly Report", id: "monthly-report" as TabType },
     { icon: TrendingUp, label: "Salary Trend", id: "salary-trend" as TabType },
+    { icon: DollarSign, label: "Payroll Approval", id: "payroll-approval" as TabType },
     { icon: CalendarOff, label: "Leave Approval", id: "leave-approval" as TabType },
-    { icon: DollarSign, label: "Loan & Advance", id: "loan-advance" as TabType },
+    { icon: Banknote, label: "Loan & Advance", id: "loan-advance" as TabType },
     { icon: Users, label: "Registration List", id: "registration-list" as TabType },
   ];
 
@@ -103,6 +115,7 @@ export default function DirectorDashboard() {
       APPROVED: "bg-green-500/20 text-green-400",
       REJECTED: "bg-red-500/20 text-red-400",
       PENDING: "bg-yellow-500/20 text-yellow-400",
+      COMPLETED: "bg-cyan-500/20 text-cyan-400",
       APPROVED_BY_AREA_MANAGER: "bg-blue-500/20 text-blue-400",
     };
     return (
@@ -168,11 +181,10 @@ export default function DirectorDashboard() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                  activeTab === item.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-primary hover:bg-primary/10"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${activeTab === item.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                  }`}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
@@ -245,6 +257,109 @@ export default function DirectorDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Loan Deduction Statistics */}
+            {loanStats && (
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-primary" />
+                  Loan Deduction Statistics
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-blue-500/20">
+                          <DollarSign className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <span className="text-muted-foreground text-sm">Total Disbursed</span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-400">
+                        Rs. {Math.round(loanStats.totalDisbursed || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {loanStats.approvedLoans || 0} active + {loanStats.completedLoans || 0} completed loans
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-green-500/20">
+                          <ArrowDownRight className="h-4 w-4 text-green-400" />
+                        </div>
+                        <span className="text-muted-foreground text-sm">Total Recovered</span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-400">
+                        Rs. {Math.round(loanStats.totalRecovered || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {loanStats.paidDeductions || 0} deductions processed
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-orange-500/20">
+                          <ArrowUpRight className="h-4 w-4 text-orange-400" />
+                        </div>
+                        <span className="text-muted-foreground text-sm">Outstanding Balance</span>
+                      </div>
+                      <p className="text-2xl font-bold text-orange-400">
+                        Rs. {Math.round(loanStats.totalOutstanding || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {loanStats.pendingDeductions || 0} deductions pending
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-purple-500/20">
+                          <CircleCheck className="h-4 w-4 text-purple-400" />
+                        </div>
+                        <span className="text-muted-foreground text-sm">Completed Loans</span>
+                      </div>
+                      <p className="text-2xl font-bold text-purple-400">
+                        {loanStats.completedLoans || 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {loanStats.rejectedLoans || 0} rejected · {loanStats.pendingLoans || 0} pending
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Recovery Progress Bar */}
+                {(loanStats.totalDisbursed > 0) && (
+                  <Card className="bg-card border-border/60">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-foreground">Recovery Progress</span>
+                        <span className="text-sm font-bold text-primary">
+                          {Math.round(((loanStats.totalRecovered || 0) / loanStats.totalDisbursed) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(((loanStats.totalRecovered || 0) / loanStats.totalDisbursed) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                        <span>Recovered: Rs. {Math.round(loanStats.totalRecovered || 0).toLocaleString()}</span>
+                        <span>Remaining: Rs. {Math.round(loanStats.totalOutstanding || 0).toLocaleString()}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -494,44 +609,14 @@ export default function DirectorDashboard() {
           </div>
         )}
 
+        {/* ─── Payroll Approval Tab ─── */}
+        {!loading && activeTab === "payroll-approval" && (
+          <PayrollApprovalContent />
+        )}
+
         {/* ─── Registration List Tab ─── */}
         {!loading && activeTab === "registration-list" && (
-          <div>
-            <h2 className="text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Registration List
-            </h2>
-            <p className="text-muted-foreground mb-8">Overview of registered personnel (data loaded from paysheet records)</p>
-
-            {paysheets.length === 0 ? (
-              <p className="text-muted-foreground text-center py-12">No registration records available.</p>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border">
-                      <TableHead className="text-primary">ID</TableHead>
-                      <TableHead className="text-primary">Full Name</TableHead>
-                      <TableHead className="text-primary">Username</TableHead>
-                      <TableHead className="text-primary">Role</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {/* Deduplicate by user ID */}
-                    {Array.from(new Map(paysheets.filter((p) => p.user).map((p) => [p.user.id, p.user])).values()).map(
-                      (u) => (
-                        <TableRow key={u.id} className="border-border/50">
-                          <TableCell className="text-muted-foreground">{u.id}</TableCell>
-                          <TableCell className="text-foreground font-medium">{u.fullName}</TableCell>
-                          <TableCell className="text-muted-foreground">{u.username}</TableCell>
-                          <TableCell className="text-muted-foreground">{u.role?.replace(/_/g, " ") || "—"}</TableCell>
-                        </TableRow>
-                      )
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
+          <UserDirectory />
         )}
       </main>
     </div>

@@ -24,8 +24,14 @@ import static org.mockito.Mockito.*;
 @DisplayName("PaysheetService – Unit Tests")
 class PaysheetServiceTest extends BaseServiceTest {
 
-    @Mock private PaysheetRepository paysheetRepository;
-    @Mock private UserRepository     userRepository;
+    @Mock
+    private PaysheetRepository paysheetRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private com.security.Ace.Front.Line.Security.Solutions.repository.LoanDeductionRepository loanDeductionRepository;
+    @Mock
+    private com.security.Ace.Front.Line.Security.Solutions.repository.AdvanceRequestRepository advanceRequestRepository;
 
     @InjectMocks
     private PaysheetService paysheetService;
@@ -78,7 +84,7 @@ class PaysheetServiceTest extends BaseServiceTest {
         @DisplayName("calculates net salary correctly: basic + OT + allowances - deductions")
         void generatePaysheet_allFieldsProvided_calculatesNetSalaryCorrectly() {
             // Net = 50000 + 5000 + 3000 - 2000 - 1000 - 500 = 54 500
-            User exec    = anAccountExecutive();
+            User exec = anAccountExecutive();
             User officer = aSecurityOfficer();
 
             when(userRepository.findByUsername("acc_exec_01")).thenReturn(Optional.of(exec));
@@ -98,7 +104,7 @@ class PaysheetServiceTest extends BaseServiceTest {
         @DisplayName("falls back to employee's configured basicSalary when request omits it")
         void generatePaysheet_nullBasicSalaryInRequest_usesEmployeeSalary() {
             // officer.basicSalary = 50 000; no overrides in request
-            User exec    = anAccountExecutive();
+            User exec = anAccountExecutive();
             User officer = aSecurityOfficer();
 
             PaysheetRequest req = new PaysheetRequest();
@@ -124,7 +130,7 @@ class PaysheetServiceTest extends BaseServiceTest {
         @Test
         @DisplayName("uses 0.0 basic salary when both request and employee have no salary configured")
         void generatePaysheet_noSalaryAnywhere_usesZeroBasic() {
-            User exec    = anAccountExecutive();
+            User exec = anAccountExecutive();
             User officer = aSecurityOfficer();
             officer.setBasicSalary(null);
 
@@ -150,7 +156,7 @@ class PaysheetServiceTest extends BaseServiceTest {
         @Test
         @DisplayName("throws BusinessException when paysheet already exists for the same month")
         void generatePaysheet_duplicateMonth_throwsBusinessException() {
-            User exec    = anAccountExecutive();
+            User exec = anAccountExecutive();
             User officer = aSecurityOfficer();
             Paysheet existing = buildSavedPaysheet(officer, exec, 54500.0);
 
@@ -201,7 +207,7 @@ class PaysheetServiceTest extends BaseServiceTest {
         @Test
         @DisplayName("returns paysheets for the authenticated user ordered most-recent first")
         void getMyPaysheets_returnsOrderedList() {
-            User exec    = anAccountExecutive();
+            User exec = anAccountExecutive();
             User officer = aSecurityOfficer();
             List<Paysheet> sheets = List.of(
                     buildSavedPaysheet(officer, exec, 54500.0),
@@ -247,7 +253,7 @@ class PaysheetServiceTest extends BaseServiceTest {
         @Test
         @DisplayName("returns paysheets for the given employee user ID")
         void getPaysheetsByUser_existingId_returnsPaysheets() {
-            User exec    = anAccountExecutive();
+            User exec = anAccountExecutive();
             User officer = aSecurityOfficer();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(officer));
@@ -281,7 +287,7 @@ class PaysheetServiceTest extends BaseServiceTest {
         @Test
         @DisplayName("returns all paysheets across every employee")
         void getAllPaysheets_returnsAll() {
-            User exec    = anAccountExecutive();
+            User exec = anAccountExecutive();
             User officer = aSecurityOfficer();
             when(paysheetRepository.findAll()).thenReturn(List.of(
                     buildSavedPaysheet(officer, exec, 54500.0),

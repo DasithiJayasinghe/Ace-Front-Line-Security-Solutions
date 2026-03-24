@@ -75,11 +75,11 @@ export const admin_payrollService = {
     return apiFetch<PayrollResponse[]>("/paysheets/admin-payroll/pending-approvals");
   },
 
-  // Approve payroll (director)
-  async approvePayroll(payrollId: number, remarks: string): Promise<PayrollResponse> {
+  // Approve payroll (director) - allows editing allowances
+  async approvePayroll(payrollId: number, body: { approvalRemarks?: string, allowances?: number }): Promise<PayrollResponse> {
     return apiFetch<PayrollResponse>(`/paysheets/admin-payroll/${payrollId}/approve`, {
       method: "POST",
-      body: JSON.stringify({ approvalRemarks: remarks }),
+      body: JSON.stringify(body),
     });
   },
 
@@ -101,6 +101,30 @@ export const admin_payrollService = {
     return apiFetch<PayrollResponse>(`/paysheets/admin-payroll/${payrollId}/send-to-bank`, {
       method: "POST",
     });
+  },
+
+  // Proceed all approved to bank and download Excel
+  async proceedAllToBank(): Promise<void> {
+    const response = await fetch("/api/paysheets/admin-payroll/proceed-bank", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+    
+    if (!response.ok) {
+        throw new Error("Failed to download payroll excel");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payroll_bank_submission_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   },
 
   // Get statistics for a month

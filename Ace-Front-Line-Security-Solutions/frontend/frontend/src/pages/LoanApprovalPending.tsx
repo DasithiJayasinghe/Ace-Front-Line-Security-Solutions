@@ -11,20 +11,18 @@ import { ChevronLeft, CheckCircle2, XCircle, Loader, AlertCircle, DollarSign } f
 import { useToast } from "@/hooks/use-toast";
 import { loanService, type LoanRequest } from "@/services/loanService";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useAuthenticatedUser } from "@/hooks/useAuthenticatedUser";
 
 export default function LoanApprovalPending() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuthenticatedUser();
   const [pendingLoans, setPendingLoans] = useState<(LoanRequest & { user: NonNullable<LoanRequest["user"]> })[]>([]);
   const [loading, setLoading] = useState(true);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectingLoanId, setRejectingLoanId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [processingId, setProcessingId] = useState<number | null>(null);
-
-  const user = localStorage.getItem("user")
-    ? JSON.parse(localStorage.getItem("user")!)
-    : { fullName: "Executive Officer", username: "executive_officer", userId: 0, role: "EXECUTIVE_OFFICER" };
 
   useEffect(() => {
     fetchPendingLoans();

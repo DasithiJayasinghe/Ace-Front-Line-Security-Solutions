@@ -148,10 +148,20 @@ export const authService = {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({ message: res.statusText }));
-      throw new Error(body.message || `API error ${res.status}`);
+      const error: any = new Error(body.message || `API error ${res.status}`);
+      if (body.data && typeof body.data === "object") {
+        error.fieldErrors = body.data;
+      }
+      throw error;
     }
     const json = await res.json();
-    if (!json.success) throw new Error(json.message || "Registration failed");
+    if (!json.success) {
+      const error: any = new Error(json.message || "Registration failed");
+      if (json.data && typeof json.data === "object") {
+        error.fieldErrors = json.data;
+      }
+      throw error;
+    }
     return json.data as UserProfile;
   },
 

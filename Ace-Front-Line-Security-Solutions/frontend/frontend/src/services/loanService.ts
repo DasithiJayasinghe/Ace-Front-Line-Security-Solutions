@@ -19,7 +19,7 @@ export interface LoanRequest {
   amount: number;
   repaymentMonths: number;
   reason: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
   rejectionReason?: string;
   createdAt: string;
   reviewedAt?: string;
