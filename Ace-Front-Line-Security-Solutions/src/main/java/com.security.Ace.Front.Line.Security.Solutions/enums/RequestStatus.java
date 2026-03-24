@@ -7,5 +7,6 @@ public enum RequestStatus {
     PENDING,
     APPROVED_BY_AREA_MANAGER,
     APPROVED,
-    REJECTED
+    REJECTED,
+    COMPLETED
 }

@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+
 /**
  * ADMIN FINANCE
  */
@@ -27,6 +28,8 @@ public interface LoanDeductionRepository extends JpaRepository<LoanDeduction, Lo
 
     List<LoanDeduction> findByDeductionMonthAndStatus(String deductionMonth, String status);
 
+    List<LoanDeduction> findByDeductionMonth(String deductionMonth);
+
     List<LoanDeduction> findByUserAndDeductionMonth(User user, String deductionMonth);
 
     /** Sum of pending deductions for a user in a given month */
@@ -38,4 +41,17 @@ public interface LoanDeductionRepository extends JpaRepository<LoanDeduction, Lo
     Double sumPendingForLoan(@Param("loan") LoanRequest loan);
 
     boolean existsByLoanRequest(LoanRequest loanRequest);
+
+    /** Count deductions by status for a specific loan */
+    long countByLoanRequestAndStatus(LoanRequest loanRequest, String status);
+
+    /** Count all deductions by status */
+    long countByStatus(String status);
+
+    /** Sum of all deduction amounts by status */
+    @Query("SELECT COALESCE(SUM(d.amount), 0) FROM LoanDeduction d WHERE d.status = :status")
+    Double sumAmountByStatus(@Param("status") String status);
+
+    /** Delete all deductions for a specific loan (cleanup after completion) */
+    void deleteByLoanRequest(LoanRequest loanRequest);
 }

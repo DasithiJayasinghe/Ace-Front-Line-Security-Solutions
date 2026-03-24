@@ -28,7 +28,7 @@ public class AdminPayrollRequest {
     @DecimalMin(value = "0.0", message = "Allowances must be non-negative")
     private Double allowances;
 
-    // Allowance breakdown (JSON map of allowance type -> amount)
+    // Allowance breakdown (JSON map of allowance type -> amount with +/- indicator)
     private Map<String, Double> allowancesDetail;
 
     @DecimalMin(value = "0.0", message = "Loan deduction must be non-negative")

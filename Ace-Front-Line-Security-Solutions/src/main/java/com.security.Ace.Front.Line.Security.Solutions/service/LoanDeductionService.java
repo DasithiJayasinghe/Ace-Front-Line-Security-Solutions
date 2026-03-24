@@ -17,7 +17,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class LoanDeductionService {
     private final LoanDeductionRepository loanDeductionRepository;
     private final LoanRequestRepository loanRequestRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Generates a deduction schedule after a loan is approved.
@@ -111,7 +114,18 @@ public class LoanDeductionService {
     }
 
     /**
+     * Get all deductions (pending + paid) for a specific month.
+     * Used by payroll generation page to auto-fill loan deductions.
+     */
+    public List<LoanDeduction> getDeductionsForMonth(String month) {
+        return loanDeductionRepository.findByDeductionMonth(month);
+    }
+
+    /**
      * Mark a deduction as paid (when accountant processes payroll).
+     * Sends a notification to the loan applicant.
+     * If all deductions for the loan are now paid, marks the loan as COMPLETED
+     * and removes the deduction schedule.
      */
     @Transactional
     public LoanDeduction markAsPaid(Long deductionId, String processedByUsername) {
@@ -129,7 +143,39 @@ public class LoanDeductionService {
         deduction.setProcessedBy(processedBy);
         deduction.setProcessedAt(LocalDateTime.now());
 
-        return loanDeductionRepository.save(deduction);
+        LoanDeduction saved = loanDeductionRepository.save(deduction);
+
+        // Send notification to the loan applicant
+        LoanRequest loan = deduction.getLoanRequest();
+        User applicant = deduction.getUser();
+        String monthLabel = deduction.getDeductionMonth();
+        long amountInt = Math.round(deduction.getAmount());
+
+        notificationService.notifyUser(
+                applicant.getId(),
+                "💰 Your loan deduction of LKR " + String.format("%,d", amountInt)
+                        + " for month " + monthLabel + " (Loan #" + loan.getId()
+                        + ") has been processed.");
+
+        // Check if all deductions for this loan are now paid
+        long pendingCount = loanDeductionRepository.countByLoanRequestAndStatus(loan, "PENDING");
+        if (pendingCount == 0) {
+            // All deductions paid — mark loan as COMPLETED
+            loan.setStatus(RequestStatus.COMPLETED);
+            loanRequestRepository.save(loan);
+
+            // Delete the deduction schedule (clean up)
+            loanDeductionRepository.deleteByLoanRequest(loan);
+
+            // Notify the applicant about completion
+            notificationService.notifyUser(
+                    applicant.getId(),
+                    "🎉 Congratulations! Your loan #" + loan.getId()
+                            + " (LKR " + String.format("%,d", Math.round(loan.getAmount()))
+                            + ") has been fully repaid. The deduction schedule has been removed.");
+        }
+
+        return saved;
     }
 
     /**
@@ -149,5 +195,42 @@ public class LoanDeductionService {
         LoanRequest loan = loanRequestRepository.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Loan not found"));
         return loanDeductionRepository.sumPendingForLoan(loan);
+    }
+
+    /**
+     * Get loan deduction statistics for director dashboard.
+     */
+    public Map<String, Object> getLoanStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+
+        // Loan request counts
+        long totalLoans = loanRequestRepository.count();
+        long approvedLoans = loanRequestRepository.countByStatus(RequestStatus.APPROVED);
+        long pendingLoans = loanRequestRepository.countByStatus(RequestStatus.PENDING);
+        long rejectedLoans = loanRequestRepository.countByStatus(RequestStatus.REJECTED);
+        long completedLoans = loanRequestRepository.countByStatus(RequestStatus.COMPLETED);
+
+        stats.put("totalLoans", totalLoans);
+        stats.put("approvedLoans", approvedLoans);
+        stats.put("pendingLoans", pendingLoans);
+        stats.put("rejectedLoans", rejectedLoans);
+        stats.put("completedLoans", completedLoans);
+
+        // Deduction amounts
+        Double totalRecovered = loanDeductionRepository.sumAmountByStatus("PAID");
+        Double totalOutstanding = loanDeductionRepository.sumAmountByStatus("PENDING");
+        long paidDeductions = loanDeductionRepository.countByStatus("PAID");
+        long pendingDeductions = loanDeductionRepository.countByStatus("PENDING");
+
+        stats.put("totalRecovered", totalRecovered != null ? totalRecovered : 0.0);
+        stats.put("totalOutstanding", totalOutstanding != null ? totalOutstanding : 0.0);
+        stats.put("totalDisbursed",
+                (totalRecovered != null ? totalRecovered : 0.0)
+                        + (totalOutstanding != null ? totalOutstanding : 0.0));
+        stats.put("paidDeductions", paidDeductions);
+        stats.put("pendingDeductions", pendingDeductions);
+        stats.put("activeSchedules", approvedLoans); // loans with active deduction schedules
+
+        return stats;
     }
 }

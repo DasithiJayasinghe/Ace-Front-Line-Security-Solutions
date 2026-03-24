@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/loan-deductions")
@@ -70,13 +71,24 @@ public class LoanDeductionController {
     }
 
     /**
-     * Get all deductions (for accountant overview).
+     * Get all deductions (pending + paid) for all loans.
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('ACCOUNT_EXECUTIVE', 'EXECUTIVE_OFFICER', 'DIRECTOR', 'CHAIRMAN')")
     public ResponseEntity<ApiResponse<List<LoanDeduction>>> getAllDeductions() {
         List<LoanDeduction> deductions = loanDeductionService.getAllDeductions();
         return ResponseEntity.ok(ApiResponse.success("All deductions retrieved", deductions));
+    }
+
+    /**
+     * Get all deductions (pending + paid) for a specific month.
+     * Used by payroll generation page to auto-fill loan deductions.
+     */
+    @GetMapping("/month/{month}")
+    @PreAuthorize("hasAnyRole('ACCOUNT_EXECUTIVE', 'EXECUTIVE_OFFICER', 'DIRECTOR', 'CHAIRMAN')")
+    public ResponseEntity<ApiResponse<List<LoanDeduction>>> getDeductionsForMonth(@PathVariable String month) {
+        List<LoanDeduction> deductions = loanDeductionService.getDeductionsForMonth(month);
+        return ResponseEntity.ok(ApiResponse.success("Deductions for month retrieved", deductions));
     }
 
     /**
@@ -99,5 +111,15 @@ public class LoanDeductionController {
     public ResponseEntity<ApiResponse<Double>> getRemainingBalance(@PathVariable Long loanId) {
         Double balance = loanDeductionService.getRemainingBalance(loanId);
         return ResponseEntity.ok(ApiResponse.success("Remaining balance retrieved", balance));
+    }
+
+    /**
+     * Get loan deduction statistics for director dashboard.
+     */
+    @GetMapping("/statistics")
+    @PreAuthorize("hasAnyRole('ACCOUNT_EXECUTIVE', 'DIRECTOR', 'CHAIRMAN')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getLoanStatistics() {
+        Map<String, Object> stats = loanDeductionService.getLoanStatistics();
+        return ResponseEntity.ok(ApiResponse.success("Loan statistics retrieved", stats));
     }
 }

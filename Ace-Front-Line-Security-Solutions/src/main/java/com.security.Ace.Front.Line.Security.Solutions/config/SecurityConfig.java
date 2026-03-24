@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -26,9 +25,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
-
 /**
- * Security configuration with JWT authentication
+ * security configuration
  */
 @Configuration
 @EnableWebSecurity
@@ -48,7 +46,6 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        // Auth endpoints
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/refresh",
@@ -57,15 +54,6 @@ public class SecurityConfig {
                                 "/api/auth/reset-password",
                                 "/uploads/**"
                         ).permitAll()
-                        // Public endpoints for job applications and careers
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/applications/apply").permitAll()
-                        // Public inquiry submission endpoints
-                        .requestMatchers(HttpMethod.POST, "/api/inquiries/service").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/inquiries/general").permitAll()
-                        // Public CV submission endpoint
-                        .requestMatchers(HttpMethod.POST, "/api/cv-submissions/submit").permitAll()
-                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -98,7 +86,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        configuration.setAllowedOrigins(List.of(allowedOrigins));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
         configuration.setAllowCredentials(true);

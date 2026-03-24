@@ -1,7 +1,6 @@
 package com.security.Ace.Front.Line.Security.Solutions.service;
 
 import com.security.Ace.Front.Line.Security.Solutions.dto.*;
-import com.security.Ace.Front.Line.Security.Solutions.dto.*;
 import com.security.Ace.Front.Line.Security.Solutions.entity.*;
 import com.security.Ace.Front.Line.Security.Solutions.enums.*;
 import com.security.Ace.Front.Line.Security.Solutions.exception.*;
@@ -24,6 +23,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OtpTokenRepository otpTokenRepository;
+    private final OtpAttemptTrackerRepository otpAttemptTrackerRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -34,11 +35,13 @@ public class AuthService {
     @Value("${app.otp.expiry-minutes}")
     private int otpExpiryMinutes;
 
+    @Value("${app.base-url:http://localhost:5173}")
+    private String baseUrl;
+
     // ============ LOGIN ============
     public LoginResponse login(LoginRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -62,14 +65,61 @@ public class AuthService {
     @Transactional
     public UserProfileResponse registerUser(RegisterUserRequest request, MultipartFile photo) {
         // Validation
+        if (request.getUsername() == null || request.getUsername().isBlank()) {
+            throw new BusinessException("Username is required");
+        }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new BusinessException("Password is required");
+        }
+        if (request.getPassword().length() < 6) {
+            throw new BusinessException("Password must be at least 6 characters");
+        }
+        if (request.getRole() == null) {
+            throw new BusinessException("Role is required");
+        }
+        if (request.getFullName() == null || request.getFullName().isBlank()) {
+            throw new BusinessException("Full name is required");
+        }
+
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new BusinessException("Email is required");
+        }
+        if (!request.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            throw new BusinessException("Valid email is required");
+        }
+
+        // Only require extra fields for roles other than CHAIRMAN and DIRECTOR
+        if (request.getRole() != Role.CHAIRMAN && request.getRole() != Role.DIRECTOR) {
+            if (request.getNicNumber() == null || request.getNicNumber().isBlank()) {
+                throw new BusinessException("NIC number is required");
+            }
+            if (request.getSex() == null) {
+                throw new BusinessException("Sex is required");
+            }
+            if (request.getResidentialAddress() == null || request.getResidentialAddress().isBlank()) {
+                throw new BusinessException("Residential address is required");
+            }
+            if (request.getMobileNumber() == null || request.getMobileNumber().isBlank()) {
+                throw new BusinessException("Mobile number is required");
+            }
+            if (request.getDateOfBirth() == null) {
+                throw new BusinessException("Date of birth is required");
+            }
+            if (request.getEmergencyContact() == null || request.getEmergencyContact().isBlank()) {
+                throw new BusinessException("Emergency contact is required");
+            }
+        }
+
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new BusinessException("Username already exists");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Email already registered");
         }
-        if (userRepository.existsByNicNumber(request.getNicNumber())) {
-            throw new BusinessException("NIC number already registered");
+        if (request.getRole() != Role.CHAIRMAN && request.getRole() != Role.DIRECTOR) {
+            if (userRepository.existsByNicNumber(request.getNicNumber())) {
+                throw new BusinessException("NIC number already registered");
+            }
         }
 
         // Validate designation for security officers
@@ -101,7 +151,8 @@ public class AuthService {
                 .basicSalary(request.getBasicSalary())
                 .adminPosition(request.getAdminPosition())
                 .specialSkills(request.getSpecialSkills())
-                .handoverEquipment(request.getHandoverEquipment() != null ? request.getHandoverEquipment() : new ArrayList<>())
+                .handoverEquipment(
+                        request.getHandoverEquipment() != null ? request.getHandoverEquipment() : new ArrayList<>())
                 .bankName(request.getBankName())
                 .bankAccountNumber(request.getBankAccountNumber())
                 .bankBranch(request.getBankBranch())
@@ -117,18 +168,19 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // Send welcome email
-        emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName(), savedUser.getUsername());
+        // Send welcome email (only if user has an email — Chairman/Director may not)
+        if (savedUser.getEmail() != null && !savedUser.getEmail().isBlank()) {
+            emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName(), savedUser.getUsername());
+        }
 
         return mapToProfile(savedUser);
     }
 
     private void validateDesignation(Designation designation) {
         List<Designation> validDesignations = Arrays.asList(
-                Designation.LSO, Designation.JSO, Designation.SSO, Designation.CSO
-        );
+                Designation.LSO, Designation.JSO, Designation.SSO, Designation.CSO, Designation.ISO);
         if (!validDesignations.contains(designation)) {
-            throw new BusinessException("Invalid designation. Allowed values: LSO, JSO, SSO, CSO");
+            throw new BusinessException("Invalid designation. Allowed values: LSO, JSO, SSO, CSO, ISO");
         }
     }
 
@@ -201,14 +253,32 @@ public class AuthService {
         return mapToProfile(user);
     }
 
+    public UserProfileResponse getProfileByStringId(String id) {
+        // Try to parse as Long first (numeric ID)
+        try {
+            Long numericId = Long.parseLong(id.trim());
+            User user = userRepository.findById(numericId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + id));
+            return mapToProfile(user);
+        } catch (NumberFormatException e) {
+            // If not numeric, try other search methods (username, etc)
+            User user = userRepository.findByUsername(id.trim())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + id));
+            return mapToProfile(user);
+        }
+    }
+
     @Transactional
     public UserProfileResponse updatePersonalInfo(String username, UpdatePersonalInfoRequest request) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (request.getResidentialAddress() != null) user.setResidentialAddress(request.getResidentialAddress());
-        if (request.getMobileNumber() != null) user.setMobileNumber(request.getMobileNumber());
-        if (request.getEmergencyContact() != null) user.setEmergencyContact(request.getEmergencyContact());
+        if (request.getResidentialAddress() != null)
+            user.setResidentialAddress(request.getResidentialAddress());
+        if (request.getMobileNumber() != null)
+            user.setMobileNumber(request.getMobileNumber());
+        if (request.getEmergencyContact() != null)
+            user.setEmergencyContact(request.getEmergencyContact());
         if (request.getEmail() != null) {
             if (userRepository.existsByEmail(request.getEmail()) &&
                     !request.getEmail().equals(user.getEmail())) {
@@ -258,6 +328,124 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    // ============ FORGOT PASSWORD (Magic Link) ============
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            // Security: don't reveal if email is registered
+            return;
+        }
+
+        // Invalidate any existing reset tokens for this user
+        passwordResetTokenRepository.deleteAllByUser(user);
+
+        // Generate a secure UUID token (valid for 1 hour)
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusHours(1))
+                .used(false)
+                .build();
+        passwordResetTokenRepository.save(resetToken);
+
+        // Build reset link and send email
+        String resetLink = baseUrl + "/reset-password?token=" + token;
+        emailService.sendPasswordResetLinkEmail(user.getEmail(), user.getFullName(), resetLink);
+    }
+
+    public boolean validateResetToken(String token) {
+        return passwordResetTokenRepository.findByToken(token)
+                .map(t -> !t.isUsed() && !t.isExpired())
+                .orElse(false);
+    }
+
+    @Transactional
+    public void resetPasswordByToken(String token, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BusinessException("Passwords do not match");
+        }
+
+        if (!PasswordValidator.isValid(newPassword)) {
+            throw new BusinessException(PasswordValidator.getValidationError(newPassword));
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessException("Invalid or expired reset link. Please request a new one."));
+
+        if (resetToken.isUsed()) {
+            throw new BusinessException("This reset link has already been used. Please request a new one.");
+        }
+
+        if (resetToken.isExpired()) {
+            throw new BusinessException("This reset link has expired. Please request a new one.");
+        }
+
+        User user = resetToken.getUser();
+
+        // Mark token as used
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        // Update password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setFirstLogin(false);
+        userRepository.save(user);
+
+        // Send confirmation email
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            emailService.sendPasswordResetConfirmationEmail(user.getEmail(), user.getFullName());
+        }
+    }
+
+    // ============ OTP - IN-APP CHANGE PASSWORD ============
+    @Transactional
+    public OtpVerificationResponse verifyOtpForReset(String email, String otp) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Email not found"));
+
+        OtpAttemptTracker tracker = otpAttemptTrackerRepository.findByEmail(email).orElse(null);
+        if (tracker != null && tracker.isLocked()) {
+            throw new BusinessException("Too many failed attempts. Please try again later.");
+        }
+
+        OtpToken otpToken = otpTokenRepository
+                .findTopByUserAndUsedFalseOrderByCreatedAtDesc(user)
+                .orElseThrow(() -> new BusinessException("No valid OTP found. Please request a new one."));
+
+        if (otpToken.isExpired()) {
+            throw new BusinessException("OTP has expired. Please request a new one.");
+        }
+
+        if (!otpToken.getOtp().equals(otp)) {
+            if (tracker == null) {
+                tracker = OtpAttemptTracker.builder().email(email).build();
+            }
+            tracker.recordFailedAttempt();
+            otpAttemptTrackerRepository.save(tracker);
+
+            int remainingAttempts = 3 - tracker.getFailedAttempts();
+            if (tracker.isLocked()) {
+                throw new BusinessException("Invalid OTP. Account locked. Try again in 15 minutes.");
+            } else {
+                throw new BusinessException("Invalid OTP. " + remainingAttempts + " attempts remaining.");
+            }
+        }
+
+        if (tracker != null) {
+            tracker.resetAttempts();
+            otpAttemptTrackerRepository.save(tracker);
+        }
+
+        return OtpVerificationResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .build();
+    }
+
     // ============ MAPPER ============
     private UserProfileResponse mapToProfile(User user) {
         return UserProfileResponse.builder()
@@ -285,6 +473,7 @@ public class AuthService {
                 .bankName(user.getBankName())
                 .bankAccountNumber(user.getBankAccountNumber())
                 .bankBranch(user.getBankBranch())
+                .active(user.isActive())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

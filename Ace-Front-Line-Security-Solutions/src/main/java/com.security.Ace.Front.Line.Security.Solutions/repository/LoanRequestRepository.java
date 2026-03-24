@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+
 /**
  * ADMIN FINANCE
  */
@@ -16,4 +17,6 @@ public interface LoanRequestRepository extends JpaRepository<LoanRequest, Long> 
     List<LoanRequest> findByUser(User user);
 
     List<LoanRequest> findByStatus(RequestStatus status);
+
+    long countByStatus(RequestStatus status);
 }

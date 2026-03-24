@@ -45,5 +45,7 @@ public class UserProfileResponse {
     private String bankAccountNumber;
     private String bankBranch;
 
+    private Boolean active;
+
     private LocalDateTime createdAt;
 }

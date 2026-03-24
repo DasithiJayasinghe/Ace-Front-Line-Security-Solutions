@@ -1,6 +1,8 @@
 package com.security.Ace.Front.Line.Security.Solutions.entity;
 
 import com.security.Ace.Front.Line.Security.Solutions.enums.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -18,6 +20,7 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User implements UserDetails {
 
     @Id
@@ -28,6 +31,7 @@ public class User implements UserDetails {
     private String username;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -41,13 +45,13 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String fullName;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = true)
     private String nicNumber;
 
     @Enumerated(EnumType.STRING)
     private Sex sex;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = true)
     private String email;
 
     @Column(columnDefinition = "TEXT")

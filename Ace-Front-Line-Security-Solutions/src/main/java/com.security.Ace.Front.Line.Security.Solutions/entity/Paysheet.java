@@ -38,12 +38,29 @@ public class Paysheet {
 
     private String remarks;
 
+    // Allowance details breakdown (JSON) - stores addition/subtraction details
+    @Column(columnDefinition = "TEXT")
+    private String allowancesDetail;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "generated_by")
     private User generatedBy;
 
+    // Director approval workflow
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approved_by")
+    private User approvedBy;
+
+    private LocalDateTime submittedAt;    // When submitted to director
+    private LocalDateTime approvedAt;     // When director approved
+    private LocalDateTime rejectedAt;     // When director rejected
+    private LocalDateTime sentToBankAt;   // When sent to bank
+
+    private String approvalRemarks;       // Director's approval comments
+    private String rejectionReason;       // Director's rejection reason
+
     @Enumerated(EnumType.STRING)
-    private PayrollStatus status = PayrollStatus.PENDING;
+    private PayrollStatus status = PayrollStatus.DRAFT;
 
     private LocalDateTime createdAt;
 

@@ -75,19 +75,19 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("If email exists, OTP has been sent"));
     }
 
-    @PostMapping("/verify-otp")
-    public ResponseEntity<ApiResponse<OtpVerificationResponse>> verifyOtp(
-            @Valid @RequestBody OtpVerificationRequest request) {
-        OtpVerificationResponse response = authService.verifyOtpForReset(request.getEmail(), request.getOtp());
-        return ResponseEntity.ok(ApiResponse.success("OTP verified successfully", response));
+    @GetMapping("/validate-reset-token")
+    public ResponseEntity<ApiResponse<Boolean>> validateResetToken(@RequestParam String token) {
+        boolean valid = authService.validateResetToken(token);
+        return ResponseEntity.ok(ApiResponse.success("Token status", valid));
     }
 
-    @PostMapping("/reset-password")
-    public ResponseEntity<ApiResponse<Void>> resetPassword(
-            @Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request.getEmail(), request.getOtp(),
+    @PostMapping("/reset-password-by-token")
+    public ResponseEntity<ApiResponse<Void>> resetPasswordByToken(
+            @Valid @RequestBody ResetPasswordByTokenRequest request) {
+        authService.resetPasswordByToken(request.getToken(),
                 request.getNewPassword(), request.getConfirmPassword());
-        return ResponseEntity.ok(ApiResponse.success("Password reset successfully. Please login with your new password"));
+        return ResponseEntity
+                .ok(ApiResponse.success("Password reset successfully. Please login with your new password."));
     }
 
     // ============ OPERATION_MANAGER ============
@@ -99,20 +99,6 @@ public class AuthController {
             @RequestPart(value = "photo", required = false) MultipartFile photo) {
         UserProfileResponse profile = authService.registerUser(request, photo);
         return ResponseEntity.ok(ApiResponse.success("User registered successfully", profile));
-    }
-
-    @GetMapping("/users")
-    @PreAuthorize("hasAnyRole('OPERATION_MANAGER', 'ACCOUNT_EXECUTIVE', 'DIRECTOR', 'CHAIRMAN', 'EXECUTIVE_OFFICER', 'AREA_MANAGER')")
-    public ResponseEntity<ApiResponse<List<UserProfileResponse>>> getAllUsers() {
-        List<UserProfileResponse> users = authService.getAllUsers();
-        return ResponseEntity.ok(ApiResponse.success("Users retrieved", users));
-    }
-
-    @GetMapping("/users/{id}")
-    @PreAuthorize("hasAnyRole('OPERATION_MANAGER', 'ACCOUNT_EXECUTIVE', 'DIRECTOR', 'CHAIRMAN', 'EXECUTIVE_OFFICER', 'AREA_MANAGER')")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> getUserById(@PathVariable Long id) {
-        UserProfileResponse profile = authService.getProfileById(id);
-        return ResponseEntity.ok(ApiResponse.success("User retrieved", profile));
     }
 
     @GetMapping("/users/role/{role}")
@@ -129,10 +115,40 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Users retrieved", users));
     }
 
+    @GetMapping("/users")
+    @PreAuthorize("hasAnyRole('OPERATION_MANAGER', 'ACCOUNT_EXECUTIVE', 'DIRECTOR', 'CHAIRMAN', 'EXECUTIVE_OFFICER', 'AREA_MANAGER')")
+    public ResponseEntity<ApiResponse<List<UserProfileResponse>>> getAllUsers() {
+        List<UserProfileResponse> users = authService.getAllUsers();
+        return ResponseEntity.ok(ApiResponse.success("Users retrieved", users));
+    }
+
+    @GetMapping("/users/{id}")
+    @PreAuthorize("hasAnyRole('OPERATION_MANAGER', 'ACCOUNT_EXECUTIVE', 'DIRECTOR', 'CHAIRMAN', 'EXECUTIVE_OFFICER', 'AREA_MANAGER')")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getUserById(@PathVariable String id) {
+        UserProfileResponse profile = authService.getProfileByStringId(id);
+        return ResponseEntity.ok(ApiResponse.success("User retrieved", profile));
+    }
+
     @DeleteMapping("/users/{id}/deactivate")
     @PreAuthorize("hasRole('OPERATION_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deactivateUser(@PathVariable Long id) {
         authService.deactivateUser(id);
         return ResponseEntity.ok(ApiResponse.success("User deactivated"));
+    }
+
+    @GetMapping("/users/{id}/debug")
+    @PreAuthorize("hasAnyRole('OPERATION_MANAGER', 'ACCOUNT_EXECUTIVE', 'DIRECTOR', 'CHAIRMAN', 'EXECUTIVE_OFFICER', 'AREA_MANAGER')")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> debugGetUserById(@PathVariable String id) {
+        // Debug endpoint - same as getUserById but logs what's happening
+        try {
+            System.out.println("[DEBUG] Searching for user ID: " + id);
+            UserProfileResponse profile = authService.getProfileByStringId(id);
+            System.out.println("[DEBUG] Found user: " + profile.getFullName());
+            return ResponseEntity.ok(ApiResponse.success("User retrieved", profile));
+        } catch (Exception e) {
+            System.out.println("[DEBUG] Error: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 }

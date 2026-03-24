@@ -4,21 +4,29 @@ import com.security.Ace.Front.Line.Security.Solutions.enums.Designation;
 import com.security.Ace.Front.Line.Security.Solutions.enums.Equipment;
 import com.security.Ace.Front.Line.Security.Solutions.enums.Role;
 import com.security.Ace.Front.Line.Security.Solutions.enums.Sex;
+import com.security.Ace.Front.Line.Security.Solutions.validator.*;
 import jakarta.validation.constraints.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class RegisterUserRequest {
 
     // Login credentials
     @NotBlank(message = "Username is required")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     private String username;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @ValidPasswordStrength(message = "Password must be at least 8 characters and contain uppercase letter, lowercase letter, number, and special character")
     private String password;
 
     @NotNull(message = "Role is required")
@@ -26,29 +34,34 @@ public class RegisterUserRequest {
 
     // Personal Information
     @NotBlank(message = "Full name is required")
+    @Size(min = 2, max = 100, message = "Full name must be between 2 and 100 characters")
     private String fullName;
 
-    @NotBlank(message = "NIC number is required")
+    @ValidNICNumber(message = "Invalid NIC number format. Must be 9 digits + X/V or 12 digits")
     private String nicNumber;
 
-    @NotNull(message = "Sex is required")
     private Sex sex;
 
-    @Email(message = "Valid email is required")
     @NotBlank(message = "Email is required")
+    @Email(message = "Email must be valid")
     private String email;
 
     @NotBlank(message = "Residential address is required")
+    @Size(min = 5, max = 500, message = "Residential address must be between 5 and 500 characters")
     private String residentialAddress;
 
-    @NotBlank(message = "Mobile number is required")
+    @ValidPhoneNumber(message = "Invalid phone number format. Must be valid Sri Lankan format (+94, 0, or full number)")
     private String mobileNumber;
 
-    @NotNull(message = "Date of birth is required")
+    @ValidAge(minAge = 18, maxAge = 65, message = "Age must be between 18 and 65 years")
     private LocalDate dateOfBirth;
 
     @NotBlank(message = "Emergency contact is required")
+    @ValidPhoneNumber(message = "Emergency contact must be a valid phone number")
     private String emergencyContact;
+
+    @Size(min = 2, max = 100, message = "Emergency contact person name must be between 2 and 100 characters")
+    private String emergencyContactPersonName;
 
     // Professional Details
     private String professionalCertificate;
@@ -61,6 +74,7 @@ public class RegisterUserRequest {
 
     private Designation designation; // for security officers only
 
+    @DecimalMin(value = "0.0", message = "Basic salary must be non-negative")
     private Double basicSalary;
 
     private String adminPosition; // for admin roles
@@ -71,6 +85,9 @@ public class RegisterUserRequest {
 
     // Bank Details
     private String bankName;
+
+    @ValidBankAccount(message = "Bank account number must be between 8 and 18 digits")
     private String bankAccountNumber;
+
     private String bankBranch;
 }
