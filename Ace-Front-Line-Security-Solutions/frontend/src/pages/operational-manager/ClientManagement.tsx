@@ -603,154 +603,120 @@ const ClientManagement = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50 border-b">
-                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Client Code
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Company Name
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Contact Person
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Service End Date
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-right">
-                      Balance
-                    </th>
-                    <th className="px-6 py-4 text-center">
-                      Actions
-                    </th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-left">Client</th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-center hidden md:table-cell">Industry</th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-center hidden lg:table-cell">Contract End</th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-center">Status</th>
+                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {paginated.map((client) => {
-                    const displayStatus = getDisplayStatus(client);
-                    const isExpiring = displayStatus === "EXPIRING";
-                    const endDateColor = isExpiring ? "text-red-600 font-bold" : "";
-                    const balanceColor =
-                      (client.totalOutstanding ?? 0) > 0 &&
-                      client.status !== "ACTIVE"
-                        ? "text-destructive"
-                        : (client.totalOutstanding ?? 0) > 0
-                        ? "text-amber-600"
-                        : "";
-
+                  {paginated.map((c) => {
+                    const displayStatus = getDisplayStatus(c);
+                    const sBadge = statusBadge(displayStatus);
                     return (
                       <tr
-                        key={client.clientId}
+                        key={c.clientId}
                         className="hover:bg-muted/30 transition-colors"
                       >
-                        <td className="px-6 py-4 font-mono text-sm text-muted-foreground">
-                          #{client.clientCode || `AF-${client.clientId}`}
-                        </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3 text-left">
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-md bg-primary/80 flex items-center justify-center font-bold text-xs text-primary-foreground shrink-0">
-                              {getInitials(client.companyName)}
+                            <div
+                              className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0 ${sBadge}`}
+                            >
+                              {getInitials(c.companyName)}
                             </div>
-                            <span className="font-bold text-sm">
-                              {client.companyName}
-                            </span>
+                            <div>
+                              <p className="font-bold text-sm text-foreground whitespace-nowrap">
+                                {c.companyName}
+                              </p>
+                              <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                {c.clientCode}
+                              </p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-semibold">
-                            {client.contactPersonName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {client.contactPersonEmail}
-                          </p>
+                        <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell text-center">
+                          {c.industryType}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3 text-sm text-muted-foreground hidden lg:table-cell text-center">
+                          {formatDate(c.contractEndDate)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
                           <span
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${statusBadge(
-                              displayStatus
-                            )}`}
+                            className={`px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap ${sBadge}`}
                           >
-                            {displayStatus}
+                            {displayStatus.replace("_", " ")}
                           </span>
                         </td>
-                        <td
-                          className={`px-6 py-4 text-sm font-medium ${endDateColor}`}
-                        >
-                          {formatDate(client.contractEndDate)}
-                        </td>
-                        <td
-                          className={`px-6 py-4 text-sm font-bold text-right ${balanceColor}`}
-                        >
-                          {formatCurrency(client.totalOutstanding)}
-                        </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-4 py-3 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button
-                                className="p-1 hover:bg-muted rounded transition-colors"
-                                disabled={
-                                  actionLoading === client.clientId
-                                }
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={actionLoading === c.clientId}
                               >
-                                <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                              </button>
+                                {actionLoading === c.clientId ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MoreVertical className="h-4 w-4" />
+                                )}
+                              </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setSelectedClient(client);
+                                  setSelectedClient(c);
                                   setView("detail");
                                 }}
                               >
-                                <Eye className="h-4 w-4 mr-2" />
+                                <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit Client
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              {client.status === "ACTIVE" && (
-                                <>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleClientAction(
-                                        client.clientId,
-                                        "suspend"
-                                      )
-                                    }
-                                  >
-                                    <Ban className="h-4 w-4 mr-2" />
-                                    Suspend Client
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() =>
-                                      handleClientAction(
-                                        client.clientId,
-                                        "terminate"
-                                      )
-                                    }
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Terminate Client
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {(client.status === "SUSPENDED" ||
-                                client.status === "TERMINATED") && (
+                              {c.status === "ACTIVE" && (
                                 <DropdownMenuItem
+                                  className="text-amber-600 focus:text-amber-600"
+                                  onClick={() =>
+                                    handleClientAction(c.clientId, "suspend")
+                                  }
+                                >
+                                  <PauseCircle className="mr-2 h-4 w-4" />
+                                  Suspend
+                                </DropdownMenuItem>
+                              )}
+                              {c.status === "SUSPENDED" && (
+                                <DropdownMenuItem
+                                  className="text-emerald-600 focus:text-emerald-600"
                                   onClick={() =>
                                     handleClientAction(
-                                      client.clientId,
+                                      c.clientId,
                                       "reactivate"
                                     )
                                   }
                                 >
-                                  <RotateCcw className="h-4 w-4 mr-2" />
-                                  Reactivate Client
+                                  <RotateCcw className="mr-2 h-4 w-4" />
+                                  Re-activate
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() =>
+                                  handleClientAction(c.clientId, "terminate")
+                                }
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Terminate
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>

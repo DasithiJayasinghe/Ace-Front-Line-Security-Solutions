@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.security.Ace.Front.Line.Security.Solutions.service.PdfService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
     private final FileStorageService fileStorageService;
+    private final PdfService pdfService;
 
     // ── Client: Upload Payment Proof ─────────────────────────────────────────
 
@@ -70,8 +72,8 @@ public class PaymentController {
     @PutMapping("/verify")
     public ResponseEntity<ApiResponse<PaymentResponse>> verifyPayment(
             @Valid @RequestBody PaymentVerificationRequest request) {
-        PaymentResponse response = paymentService.verifyPayment(request);
-        return ResponseEntity.ok(ApiResponse.success("Payment verification completed", response));
+        PaymentResponse updatedPayment = paymentService.verifyPayment(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Payment status updated successfully", updatedPayment));
     }
 
     /**
@@ -160,6 +162,22 @@ public class PaymentController {
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"payment-proof-" + paymentId + "\"")
                 .body(resource);
+    }
+
+    /**
+     * GET /api/payments/{paymentId}/receipt
+     * Serves the PDF receipt for a specific payment.
+     */
+    @GetMapping("/{paymentId}/receipt")
+    public ResponseEntity<byte[]> downloadReceipt(@PathVariable Integer paymentId) {
+        byte[] pdfBytes = pdfService.generateReceiptPdf(paymentId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "receipt-" + paymentId + ".pdf");
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 
     /**

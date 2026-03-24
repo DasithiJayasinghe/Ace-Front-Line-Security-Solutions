@@ -10,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +31,7 @@ public class AuthServiceTest {
 
     @Test
     public void testLoginOperationalManager() {
-        User user = new User(1L, "ops@ace.com", "ops123", "OPERATIONAL_MANAGER");
+        User user = new User(1L, "ops@ace.com", "ops123", "OPERATIONAL_MANAGER", true, LocalDateTime.now(), LocalDateTime.now());
         when(userRepository.findByEmail("ops@ace.com")).thenReturn(Optional.of(user));
 
         LoginRequest request = new LoginRequest();
@@ -44,7 +45,7 @@ public class AuthServiceTest {
 
     @Test
     public void testLoginExecutive() {
-        User user = new User(1L, "exec1@ace.com", "exec123", "EXECUTIVE");
+        User user = new User(1L, "exec1@ace.com", "exec123", "EXECUTIVE", true, LocalDateTime.now(), LocalDateTime.now());
         when(userRepository.findByEmail("exec1@ace.com")).thenReturn(Optional.of(user));
 
         LoginRequest request = new LoginRequest();

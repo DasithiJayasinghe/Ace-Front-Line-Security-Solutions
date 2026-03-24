@@ -1,6 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Shield, LogOut, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -18,14 +17,34 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps) => {
   const location = useLocation();
+  const isClientView = basePath.startsWith("/client");
+  const userLabel = isClientView
+    ? (localStorage.getItem("companyName") || localStorage.getItem("username") || role)
+    : (localStorage.getItem("email") || role);
+  const userInitials = userLabel
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("email");
+    localStorage.removeItem("companyName");
+    localStorage.removeItem("clientId");
+    localStorage.removeItem("username");
+    localStorage.removeItem("isFirstLogin");
+  };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 bg-charcoal text-charcoal-foreground flex flex-col shrink-0">
         <div className="p-6 border-b border-charcoal-foreground/10">
           <Link to="/" className="flex items-center gap-3">
-            <Shield className="h-7 w-7 text-primary" />
+            <img src="/logo.png" alt="Ace Front Line Security Logo" className="h-8 w-8" />
             <div className="leading-none">
               <p className="font-extrabold text-sm uppercase tracking-tight">Ace Front Line</p>
               <p className="text-[9px] tracking-[0.2em] text-charcoal-foreground/50 uppercase mt-0.5">{role}</p>
@@ -58,25 +77,29 @@ const DashboardLayout = ({ title, role, items, basePath }: DashboardLayoutProps)
           <Link to={`${basePath}/profile`} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal-foreground/70 hover:bg-charcoal-foreground/5 hover:text-charcoal-foreground transition-all">
             <User className="h-4 w-4" /> Profile
           </Link>
-          <Link to="/" className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all">
+          <Link
+            to="/"
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all"
+          >
             <LogOut className="h-4 w-4" /> Logout
           </Link>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 bg-background">
+      <main id="dashboard-main" className="flex-1 bg-background overflow-y-auto">
         <header className="h-16 border-b bg-card px-8 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-foreground">{title}</h1>
+          <h1 className="text-base font-extrabold uppercase tracking-tight text-foreground">{title}</h1>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">{role}</p>
+              <p className="text-sm font-semibold text-foreground">{userLabel}</p>
               <p className="text-[10px] text-muted-foreground">Logged in</p>
             </div>
             <Link to={`${basePath}/profile`}>
               <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                  {role.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
             </Link>

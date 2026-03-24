@@ -203,15 +203,15 @@ const ClientInvoices = () => {
                 {/* Table */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left">
+                        <table className="w-full">
                             <thead className="bg-gray-100 border-b-2 border-gray-200">
                             <tr className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
-                                <th className="px-6 py-3 text-left">Invoice #</th>
-                                <th className="px-6 py-3 text-left">Period</th>
-                                <th className="px-6 py-3 text-left">Issue Date</th>
-                                <th className="px-6 py-3 text-left">Due Date</th>
-                                <th className="px-6 py-3 text-left">Amount (LKR)</th>
-                                <th className="px-6 py-3 text-left">Status</th>
+                                <th className="px-6 py-3 text-center">Invoice #</th>
+                                <th className="px-6 py-3 text-center">Period</th>
+                                <th className="px-6 py-3 text-center">Issue Date</th>
+                                <th className="px-6 py-3 text-center">Due Date</th>
+                                <th className="px-6 py-3 text-center">Amount (LKR)</th>
+                                <th className="px-6 py-3 text-center">Status</th>
                                 <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                             </thead>
@@ -226,37 +226,35 @@ const ClientInvoices = () => {
                             ) : paginated.map(inv => {
                                 const period = `${MONTHS[(inv.billingMonth ?? 1) - 1]} ${inv.billingYear ?? ""}`;
                                 return (
-                                    <tr key={inv.invoiceId} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-3 font-semibold text-sm text-gray-900">
+                                <tr key={inv.invoiceId}
+                                    onClick={() => navigate(`/client/invoices/${inv.invoiceId}`)}
+                                    className="hover:bg-gray-50 transition-colors cursor-pointer">
+                                        <td className="px-6 py-3 font-semibold text-sm text-gray-900 text-center">
                                             {inv.invoiceNumber ?? `INV-${inv.invoiceId}`}
                                         </td>
-                                        <td className="px-6 py-3 text-sm text-gray-600">{period}</td>
-                                        <td className="px-6 py-3 text-sm text-gray-600">
+                                        <td className="px-6 py-3 text-sm text-gray-600 text-center">{period}</td>
+                                        <td className="px-6 py-3 text-sm text-gray-600 text-center">
                                             {inv.issueDate ? new Date(inv.issueDate).toLocaleDateString("en-LK") : "—"}
                                         </td>
-                                        <td className={`px-6 py-3 text-sm font-medium ${inv.status === "OVERDUE" ? "text-red-600" : "text-gray-600"}`}>
+                                        <td className={`px-6 py-3 text-sm font-medium text-center ${inv.status === "OVERDUE" ? "text-red-600" : "text-gray-600"}`}>
                                             {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-LK") : "—"}
                                         </td>
-                                        <td className="px-6 py-3 text-sm font-semibold text-gray-900">
+                                        <td className="px-6 py-3 text-sm font-semibold text-gray-900 text-center">
                                             {(inv.totalAmount ?? 0).toLocaleString("en-LK", { minimumFractionDigits: 2 })}
                                         </td>
-                                        <td className="px-6 py-3">
+                                        <td className="px-6 py-3 text-center">
                                             <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${statusBadge(inv.status)}`}>
                                                 {statusLabel(inv.status)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button
-                                                    onClick={() => navigate(`/client/invoices/${inv.invoiceId}`)}
-                                                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
-                                                    title="View Details"
-                                                >
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                </button>
                                                 {(inv.status === "ISSUED" || inv.status === "PAYMENT_REJECTED" || inv.status === "OVERDUE") && (
                                                     <button
-                                                        onClick={() => navigate(`/client/invoices/${inv.invoiceId}/upload-proof`)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigate(`/client/invoices/${inv.invoiceId}/upload-proof`);
+                                                        }}
                                                         className="flex items-center gap-1 px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
                                                         title="Upload Payment Proof"
                                                     >
@@ -265,7 +263,10 @@ const ClientInvoices = () => {
                                                     </button>
                                                 )}
                                                 <button
-                                                    onClick={() => handleDownload(inv.invoiceId)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDownload(inv.invoiceId);
+                                                    }}
                                                     className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
                                                     title="Download PDF"
                                                 >

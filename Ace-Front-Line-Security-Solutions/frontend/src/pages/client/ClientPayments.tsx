@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { paymentApi } from "@/lib/api";
+import { paymentApi, invoiceApi } from "@/lib/api";
 import {
     CreditCard, CheckCircle2, Clock, AlertTriangle, Calendar,
     Search, Download, Eye, ChevronLeft, ChevronRight, FileText,
@@ -94,9 +94,22 @@ const ClientPayments = () => {
     const handleDownloadReceipt = async (p: any) => {
         setDownloading(p.paymentId);
         try {
-            await paymentApi.downloadReceipt(p.invoiceId, p.invoiceNumber ?? String(p.invoiceId));
-        } catch {
-            alert("Could not download receipt. Please try again.");
+            if (p.verificationStatus === "VERIFIED") {
+                await paymentApi.downloadReceipt(p.paymentId, p.invoiceNumber ?? String(p.invoiceId));
+            } else {
+                const blob = await invoiceApi.downloadPdf(p.invoiceId);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `invoice-${p.invoiceNumber ?? p.invoiceId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        } catch (error) {
+            console.error("Download failed:", error);
+            alert("Could not download the document. Please try again.");
         } finally {
             setDownloading(null);
         }
@@ -228,13 +241,13 @@ const ClientPayments = () => {
                     <table className="w-full text-left">
                         <thead className="bg-gray-100 border-b-2 border-gray-200">
                         <tr className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
-                            <th className="px-5 py-3 text-left">Invoice #</th>
-                            <th className="px-5 py-3 text-left">Amount Paid</th>
-                            <th className="px-5 py-3 text-left hidden sm:table-cell">Payment Date</th>
-                            <th className="px-5 py-3 text-left hidden md:table-cell">Transaction Ref</th>
-                            <th className="px-5 py-3 text-left hidden lg:table-cell">Method</th>
-                            <th className="px-5 py-3 text-left">Submitted</th>
-                            <th className="px-5 py-3 text-left">Status</th>
+                            <th className="px-5 py-3 text-center">Invoice #</th>
+                            <th className="px-5 py-3 text-center">Amount Paid</th>
+                            <th className="px-5 py-3 text-center hidden sm:table-cell">Payment Date</th>
+                            <th className="px-5 py-3 text-center hidden md:table-cell">Transaction Ref</th>
+                            <th className="px-5 py-3 text-center hidden lg:table-cell">Method</th>
+                            <th className="px-5 py-3 text-center">Submitted</th>
+                            <th className="px-5 py-3 text-center">Status</th>
                             <th className="px-5 py-3 text-right">Actions</th>
                         </tr>
                         </thead>
@@ -258,10 +271,12 @@ const ClientPayments = () => {
                                 </td>
                             </tr>
                         ) : paginated.map((p: any) => (
-                            <tr key={p.paymentId} className={`hover:bg-gray-50 transition-colors ${
+                            <tr key={p.paymentId}
+                                onClick={() => navigate(`/client/invoices/${p.invoiceId}`)}
+                                className={`hover:bg-gray-50 transition-colors cursor-pointer ${
                                 p.verificationStatus === "REJECTED" ? "bg-red-50/30" : ""
                             }`}>
-                                <td className="px-5 py-3 font-semibold text-sm text-gray-900">
+                                <td className="px-5 py-3 font-semibold text-sm text-gray-900 text-center">
                                     <button
                                         onClick={() => navigate(`/client/invoices/${p.invoiceId}`)}
                                         className="hover:text-primary hover:underline transition-colors"
@@ -269,31 +284,31 @@ const ClientPayments = () => {
                                         {p.invoiceNumber ?? `INV-${p.invoiceId}`}
                                     </button>
                                 </td>
-                                <td className="px-5 py-3 font-bold text-sm text-gray-900">
+                                <td className="px-5 py-3 font-bold text-sm text-gray-900 text-center">
                                     {formatLKR(p.amountPaid ?? 0)}
                                 </td>
-                                <td className="px-5 py-3 text-sm text-gray-600 hidden sm:table-cell">
+                                <td className="px-5 py-3 text-sm text-gray-600 hidden sm:table-cell text-center">
                                     {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-LK") : "—"}
                                 </td>
-                                <td className="px-5 py-3 text-xs text-gray-600 hidden md:table-cell font-mono">
+                                <td className="px-5 py-3 text-xs text-gray-600 hidden md:table-cell font-mono text-center">
                                     {p.transactionReference ?? "—"}
                                 </td>
-                                <td className="px-5 py-3 text-sm text-gray-600 hidden lg:table-cell capitalize">
+                                <td className="px-5 py-3 text-sm text-gray-600 hidden lg:table-cell capitalize text-center">
                                     {(p.paymentMethod ?? "").toLowerCase().replace(/_/g, " ")}
                                 </td>
-                                <td className="px-5 py-3 text-xs text-gray-500">
+                                <td className="px-5 py-3 text-xs text-gray-500 text-center">
                                     {p.proofUploadedAt
                                         ? new Date(p.proofUploadedAt).toLocaleDateString("en-LK")
                                         : "—"}
                                 </td>
-                                <td className="px-5 py-3">
+                                <td className="px-5 py-3 text-center">
                                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${verificationBadge(p.verificationStatus)}`}>
                                         {verificationLabel(p.verificationStatus)}
                                     </span>
                                     {p.verificationStatus === "REJECTED" && p.rejectionReason && (
                                         <button
                                             onClick={() => setRejectionReasonModal(p.rejectionReason)}
-                                            className="block text-[10px] text-red-500 mt-1 hover:underline"
+                                            className="block text-[10px] text-red-500 mt-1 hover:underline w-full text-center"
                                         >
                                             View reason
                                         </button>
@@ -301,16 +316,12 @@ const ClientPayments = () => {
                                 </td>
                                 <td className="px-5 py-3">
                                     <div className="flex items-center justify-end gap-1">
-                                        <button
-                                            onClick={() => navigate(`/client/invoices/${p.invoiceId}`)}
-                                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-primary"
-                                            title="View Invoice"
-                                        >
-                                            <Eye className="h-3.5 w-3.5" />
-                                        </button>
-                                        {p.verificationStatus === "VERIFIED" && (
+                                        {p.verificationStatus === "VERIFIED" ? (
                                             <button
-                                                onClick={() => handleDownloadReceipt(p)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDownloadReceipt(p);
+                                                }}
                                                 disabled={downloading === p.paymentId}
                                                 className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-xs font-bold transition-colors disabled:opacity-60"
                                                 title="Download Receipt"
@@ -321,10 +332,29 @@ const ClientPayments = () => {
                                                 }
                                                 Receipt
                                             </button>
+                                        ) : (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDownloadReceipt(p); // This function downloads the invoice by default
+                                                }}
+                                                disabled={downloading === p.paymentId}
+                                                className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors disabled:opacity-60"
+                                                title="Download Invoice"
+                                            >
+                                                {downloading === p.paymentId
+                                                    ? <span className="w-3 h-3 border-2 border-gray-700 border-t-transparent rounded-full animate-spin" />
+                                                    : <Download className="h-3 w-3" />
+                                                }
+                                                Invoice
+                                            </button>
                                         )}
                                         {p.verificationStatus === "REJECTED" && (
                                             <button
-                                                onClick={() => navigate(`/client/invoices/${p.invoiceId}/upload-proof`)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/client/invoices/${p.invoiceId}/upload-proof`);
+                                                }}
                                                 className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-xs font-bold transition-colors"
                                                 title="Re-upload Proof"
                                             >

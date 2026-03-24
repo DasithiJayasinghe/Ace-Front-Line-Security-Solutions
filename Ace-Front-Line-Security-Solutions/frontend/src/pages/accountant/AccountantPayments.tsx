@@ -258,13 +258,13 @@ const AccountantPayments = () => {
                         <thead>
                         <tr className="bg-muted/40 border-b text-[11px] font-bold uppercase tracking-widest text-gray-400">
                             <th className="px-5 py-3.5 text-left">Client</th>
-                            <th className="px-5 py-3.5 text-left">Invoice #</th>
-                            <th className="px-5 py-3.5 text-left">Amount</th>
-                            <th className="px-5 py-3.5 text-left hidden sm:table-cell">Payment Date</th>
-                            <th className="px-5 py-3.5 text-left hidden md:table-cell">Transaction Ref</th>
-                            <th className="px-5 py-3.5 text-left">Uploaded</th>
-                            {tab === "history" && <th className="px-5 py-3.5 text-left">Status</th>}
-                            <th className="px-5 py-3.5 text-center">Actions</th>
+                            <th className="px-5 py-3.5 text-center">Invoice #</th>
+                            <th className="px-5 py-3.5 text-center">Amount</th>
+                            <th className="px-5 py-3.5 text-center hidden sm:table-cell">Payment Date</th>
+                            <th className="px-5 py-3.5 text-center hidden md:table-cell">Transaction Ref</th>
+                            <th className="px-5 py-3.5 text-center">Uploaded</th>
+                            {tab === "history" && <th className="px-5 py-3.5 text-center">Status</th>}
+                            <th className="px-5 py-3.5 text-right">Actions</th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -288,7 +288,7 @@ const AccountantPayments = () => {
                                 className={`transition-colors hover:bg-gray-50 ${
                                     p.verificationStatus === "REJECTED" ? "bg-red-50/20" : ""
                                 }`}>
-                                <td className="px-5 py-4">
+                                <td className="px-5 py-4 text-left">
                                     <div className="flex items-center gap-2">
                                         <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-black font-black text-xs shrink-0">
                                             {(p.companyName || "?").split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
@@ -296,32 +296,32 @@ const AccountantPayments = () => {
                                         <span className="font-medium text-sm text-gray-900 whitespace-nowrap">{p.companyName}</span>
                                     </div>
                                 </td>
-                                <td className="px-5 py-4 font-bold text-sm text-gray-900 whitespace-nowrap">
+                                <td className="px-5 py-4 font-bold text-sm text-gray-900 whitespace-nowrap text-center">
                                     {p.invoiceNumber ?? `INV-${p.invoiceId}`}
                                 </td>
-                                <td className="px-5 py-4 font-bold text-sm text-gray-900 whitespace-nowrap">
+                                <td className="px-5 py-4 font-bold text-sm text-gray-900 whitespace-nowrap text-center">
                                     {formatLKR(p.amountPaid ?? 0)}
                                 </td>
-                                <td className="px-5 py-4 text-sm text-gray-600 hidden sm:table-cell">
+                                <td className="px-5 py-4 text-sm text-gray-600 hidden sm:table-cell text-center">
                                     {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-LK") : "—"}
                                 </td>
-                                <td className="px-5 py-4 text-xs font-mono text-gray-600 hidden md:table-cell">
+                                <td className="px-5 py-4 text-xs font-mono text-gray-600 hidden md:table-cell text-center">
                                     {p.transactionReference ?? "—"}
                                 </td>
-                                <td className="px-5 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                <td className="px-5 py-4 text-sm text-gray-500 whitespace-nowrap text-center">
                                     {timeAgo(p.proofUploadedAt)}
                                 </td>
                                 {tab === "history" && (
-                                    <td className="px-5 py-4">
+                                    <td className="px-5 py-4 text-center">
                                         <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${verificationBadge(p.verificationStatus)}`}>
                                             {p.verificationStatus}
                                         </span>
                                     </td>
                                 )}
-                                <td className="px-5 py-4 text-center">
+                                <td className="px-5 py-4 text-right">
                                     <button
                                         onClick={() => navigate(`/accountant/payments/${p.paymentId}`)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap mx-auto ${
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ml-auto ${
                                             tab === "queue"
                                                 ? "bg-yellow-400 hover:bg-yellow-500 text-black"
                                                 : "border border-gray-200 text-gray-700 hover:bg-gray-50"

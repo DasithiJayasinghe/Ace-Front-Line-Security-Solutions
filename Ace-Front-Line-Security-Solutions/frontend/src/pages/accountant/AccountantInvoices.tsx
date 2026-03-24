@@ -418,13 +418,13 @@ const AccountantInvoices = () => {
                                 <table className="w-full text-sm">
                                     <thead>
                                     <tr className="bg-muted/50 border-b">
-                                        <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide">Invoice #</th>
-                                        <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide">Client</th>
-                                        <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide hidden md:table-cell">Period</th>
-                                        <th className="text-center px-4 py-3 text-xs font-bold uppercase tracking-wide">Status</th>
-                                        <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide">Total</th>
-                                        <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide hidden sm:table-cell">Balance</th>
-                                        <th className="text-center px-4 py-3 text-xs font-bold uppercase tracking-wide">Actions</th>
+                                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-left">Invoice #</th>
+                                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-left">Client</th>
+                                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-center hidden md:table-cell">Period</th>
+                                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-center">Status</th>
+                                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-right">Total</th>
+                                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-right hidden sm:table-cell">Balance</th>
+                                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-right">Actions</th>
                                     </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -440,8 +440,8 @@ const AccountantInvoices = () => {
                                                         inv.status === "OVERDUE" ? "bg-red-50/30" :
                                                         inv.status === "DRAFT"   ? "bg-yellow-50/20" : ""
                                                     }`}>
-                                                    <td className="px-4 py-3 font-bold whitespace-nowrap">{inv.invoiceNumber}</td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-4 py-3 font-bold whitespace-nowrap text-left">{inv.invoiceNumber}</td>
+                                                    <td className="px-4 py-3 text-left">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-black font-black text-xs shrink-0">
                                                                 {(inv.companyName || "?").split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
@@ -449,7 +449,7 @@ const AccountantInvoices = () => {
                                                             <span className="font-medium text-sm whitespace-nowrap">{inv.companyName}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-muted-foreground text-sm hidden md:table-cell whitespace-nowrap">
+                                                    <td className="px-4 py-3 text-muted-foreground text-sm hidden md:table-cell whitespace-nowrap text-center">
                                                         {inv.billingMonth ? `${MONTHS[inv.billingMonth]} ${inv.billingYear}` : formatDate(inv.periodFrom)}
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
@@ -465,7 +465,7 @@ const AccountantInvoices = () => {
                                                         }
                                                     </td>
                                                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                                                        <div className="flex items-center justify-center gap-1">
+                                                        <div className="flex items-center justify-end gap-1">
                                                             {/* Expand/Collapse */}
                                                             <button
                                                                 onClick={() => setExpanded(open ? null : inv.invoiceId)}

@@ -117,26 +117,49 @@ const ClientInvoiceDetail = () => {
                 {/* Invoice Document Card */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden print:shadow-none">
 
-{/* Invoice Header */}
-                <div className="px-8 py-6 border-b border-gray-100 flex flex-col sm:flex-row items-start justify-between gap-6">
-                    <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shrink-0">
-                            <Shield className="w-5 h-5 text-primary-foreground" />
+                    {/* Company header + meta */}
+                    <div className="p-6 border-b">
+                        <div className="flex flex-col sm:flex-row justify-between gap-6">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <img
+                                        src="/logo.png"
+                                        alt="Ace Front Line Security Logo"
+                                        className="w-10 h-10 rounded-lg object-cover"
+                                    />
+                                    <div>
+                                        <p className="font-black text-sm leading-tight">ACE FRONT LINE SECURITY SOLUTIONS (PVT) LTD</p>
+                                        <p className="text-xs text-muted-foreground">Professional Security Services</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">No. 123, Security Tower, Colombo 07</p>
+                                <p className="text-xs text-muted-foreground">VAT No: 101127788-7000</p>
+                            </div>
+                            <div className="space-y-1 text-sm sm:text-right">
+                                <p className="text-2xl font-black text-yellow-500">INVOICE</p>
+                                <div className="flex sm:justify-end gap-3 text-sm">
+                                    <span className="text-muted-foreground">Invoice #</span>
+                                    <span className="font-bold">{invoice.invoiceNumber}</span>
+                                </div>
+                                <div className="flex sm:justify-end gap-3 text-sm">
+                                    <span className="text-muted-foreground">Period</span>
+                                    <span>
+                                        {period}
+                                    </span>
+                                </div>
+                                <div className="flex sm:justify-end gap-3 text-sm">
+                                    <span className="text-muted-foreground">Issue Date</span>
+                                    <span>{invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</span>
+                                </div>
+                                <div className="flex sm:justify-end gap-3 text-sm">
+                                    <span className="text-muted-foreground">Due Date</span>
+                                    <span className="font-bold">{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p className="font-black text-gray-900 text-base leading-tight">ACE FRONT LINE</p>
-                            <p className="text-xs text-gray-500">Security Solutions (PVT) Ltd</p>
-                            <p className="text-xs text-gray-400 mt-2">189/2 Sandatenna Mawatha, Battaramulla</p>
-                            <p className="text-xs text-gray-400">Tel: 0114848177 &nbsp;|&nbsp; acefrontlines@gmail.com</p>
-                            <p className="text-xs text-gray-400">VAT No: 101127788-7000</p>
-                        </div>
-                    </div>
-                    <div className="sm:text-right shrink-0">
-                        <p className="text-3xl font-black text-gray-900 tracking-tight">INVOICE</p>
-                        <p className="text-sm font-bold text-gray-600 mt-1">{invoice.invoiceNumber ?? `INV-${invoice.invoiceId}`}</p>
-                        <p className="text-xs text-gray-400 mt-1.5">Issue Date: {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString("en-LK") : "—"}</p>
-                        <p className="text-xs text-gray-400">Due Date: <span className={invoice.status === "OVERDUE" ? "text-red-500 font-semibold" : ""}>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-LK") : "—"}</span></p>
-                        <span className={`inline-block mt-2 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${statusBadge(invoice.status)}`}>{invoice.status}</span>
+                        <div className="mt-5 pt-4 border-t">
+                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Bill To</p>
+                            <p className="font-bold">{companyName}</p>
                         </div>
                     </div>
 

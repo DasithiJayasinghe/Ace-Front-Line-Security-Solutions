@@ -121,6 +121,39 @@ public class PdfService {
         }
     }
 
+    // ── RECEIPT: Public entry point ──────────────────────────────────────────
+
+    public byte[] generateReceiptPdf(Integer paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", paymentId));
+        Invoice invoice = payment.getInvoice();
+
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Document doc = new Document(PageSize.A4, 45, 45, 45, 45);
+            PdfWriter.getInstance(doc, baos);
+            doc.open();
+
+            addReceiptHeader(doc, payment);
+            addClientInfoSection(doc, invoice); // Re-use client info block
+
+            doc.add(Chunk.NEWLINE);
+            addReceiptDetails(doc, payment);
+
+            doc.add(Chunk.NEWLINE);
+            addBankDetails(doc, invoice); // Re-use bank details block
+
+            addSignatureLine(doc, invoice); // Re-use signature line
+
+            doc.close();
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for receipt (payment {}): {}", paymentId, e.getMessage());
+            throw new RuntimeException("Receipt PDF generation failed: " + e.getMessage(), e);
+        }
+    }
+
     // ── 1. Header ─────────────────────────────────────────────────────────────
 
     private void addHeader(Document doc, Invoice invoice) throws DocumentException {
@@ -803,5 +836,147 @@ public class PdfService {
     private String fmt2(BigDecimal value) {
         if (value == null) return "0.00";
         return String.format("%,.2f", value.doubleValue());
+    }
+
+    // ── RECEIPT: Header ───────────────────────────────────────────────────────
+
+    private void addReceiptHeader(Document doc, Payment payment) throws DocumentException {
+        PdfPTable header = new PdfPTable(2);
+        header.setWidthPercentage(100);
+        header.setWidths(new float[]{1.5f, 1f});
+        header.setSpacingAfter(0);
+
+        // Left: Company Info
+        PdfPCell leftCell = new PdfPCell();
+        leftCell.setBorder(Rectangle.NO_BORDER);
+        leftCell.setBackgroundColor(BaseColor.WHITE);
+        leftCell.setPadding(16);
+        leftCell.setVerticalAlignment(Element.ALIGN_TOP);
+
+        PdfPTable logoRow = new PdfPTable(new float[]{0.15f, 0.85f});
+        logoRow.setWidthPercentage(100);
+        logoRow.setSpacingAfter(8);
+        Image logoImage = loadBrandLogo();
+        if (logoImage != null) {
+            logoImage.scaleToFit(30f, 30f);
+            PdfPCell logoCell = new PdfPCell(logoImage, false);
+            logoCell.setBorder(Rectangle.NO_BORDER);
+            logoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            logoCell.setPadding(0);
+            logoRow.addCell(logoCell);
+        }
+        PdfPCell nameCell = new PdfPCell();
+        nameCell.setBorder(Rectangle.NO_BORDER);
+        nameCell.setPaddingLeft(7);
+        nameCell.setPaddingTop(0);
+        nameCell.addElement(new Paragraph("ACE FRONT LINE", new Font(Font.FontFamily.HELVETICA, 13, Font.BOLD, BRAND_DARK)));
+        nameCell.addElement(new Paragraph("Security Solutions (PVT) Ltd", new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL, TEXT_MUTED)));
+        logoRow.addCell(nameCell);
+        leftCell.addElement(logoRow);
+        Font addrFont = new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL, TEXT_MUTED);
+        leftCell.addElement(new Paragraph("189/2 Sandatenna Mawatha, Battaramulla", addrFont));
+        leftCell.addElement(new Paragraph("Tel: 0114848177  |  acefrontlines@gmail.com", addrFont));
+        leftCell.addElement(new Paragraph("VAT No: 101127788-7000", addrFont));
+
+        // Right: RECEIPT heading
+        PdfPCell rightCell = new PdfPCell();
+        rightCell.setBorder(Rectangle.NO_BORDER);
+        rightCell.setBackgroundColor(BaseColor.WHITE);
+        rightCell.setPadding(16);
+        rightCell.setVerticalAlignment(Element.ALIGN_TOP);
+
+        Paragraph receiptHead = new Paragraph("PAYMENT RECEIPT", new Font(Font.FontFamily.HELVETICA, 22, Font.BOLD, BRAND_DARK));
+        receiptHead.setAlignment(Element.ALIGN_RIGHT);
+        rightCell.addElement(receiptHead);
+
+        Paragraph receiptNumP = new Paragraph("Receipt #" + payment.getPaymentId(), new Font(Font.FontFamily.HELVETICA, 9, Font.BOLD, BRAND_DARK));
+        receiptNumP.setAlignment(Element.ALIGN_RIGHT);
+        receiptNumP.setSpacingBefore(2);
+        rightCell.addElement(receiptNumP);
+
+        rightCell.addElement(new Paragraph(" "));
+        Paragraph dateLine = metaRow("DATE", payment.getPaymentDate().format(DATE_FMT_SHORT), false);
+        dateLine.setAlignment(Element.ALIGN_RIGHT);
+        rightCell.addElement(dateLine);
+
+        Paragraph statusLine = metaRow("STATUS", "VERIFIED", true);
+        statusLine.setAlignment(Element.ALIGN_RIGHT);
+        rightCell.addElement(statusLine);
+
+        header.addCell(leftCell);
+        header.addCell(rightCell);
+        doc.add(header);
+
+        // Yellow accent rule below header
+        PdfPTable sep = new PdfPTable(1);
+        sep.setWidthPercentage(100);
+        sep.setSpacingAfter(6);
+        PdfPCell sepCell = new PdfPCell(new Phrase(" "));
+        sepCell.setBorder(Rectangle.NO_BORDER);
+        sepCell.setBackgroundColor(BRAND_YELLOW);
+        sepCell.setFixedHeight(3f);
+        sep.addCell(sepCell);
+        doc.add(sep);
+    }
+
+    // ── RECEIPT: Details Table ────────────────────────────────────────────────
+
+    private void addReceiptDetails(Document doc, Payment payment) throws DocumentException {
+        addSectionTitle(doc, "Payment Details");
+
+        PdfPTable detailsTable = new PdfPTable(2);
+        detailsTable.setWidthPercentage(100);
+        detailsTable.setWidths(new float[]{1f, 2f});
+        detailsTable.setSpacingAfter(12);
+
+        // Amount Paid (highlighted)
+        PdfPCell amountLabelCell = new PdfPCell(new Phrase("Amount Paid (LKR)", FONT_H3));
+        amountLabelCell.setBorder(Rectangle.NO_BORDER);
+        amountLabelCell.setBackgroundColor(LIGHT_GREY);
+        amountLabelCell.setPadding(12);
+        detailsTable.addCell(amountLabelCell);
+
+        PdfPCell amountValueCell = new PdfPCell(new Phrase(fmt2(payment.getAmountPaid()), new Font(Font.FontFamily.HELVETICA, 20, Font.BOLD, BRAND_DARK)));
+        amountValueCell.setBorder(Rectangle.NO_BORDER);
+        amountValueCell.setBackgroundColor(LIGHT_GREY);
+        amountValueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        amountValueCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        amountValueCell.setPadding(12);
+        detailsTable.addCell(amountValueCell);
+
+        doc.add(detailsTable);
+
+        PdfPTable metaTable = new PdfPTable(2);
+        metaTable.setWidthPercentage(100);
+        metaTable.setWidths(new float[]{1f, 1f});
+
+        // Left column
+        PdfPCell left = new PdfPCell();
+        left.setBorder(Rectangle.NO_BORDER);
+        left.setPadding(0);
+        left.addElement(labelValue("PAYMENT DATE", payment.getPaymentDate().format(DATE_FMT)));
+        left.addElement(labelValue("PAYMENT METHOD", payment.getPaymentMethod().toString().replace("_", " ")));
+        if (payment.getBankName() != null) {
+            left.addElement(labelValue("BANK", payment.getBankName()));
+        }
+        if (payment.getTransactionReference() != null) {
+            left.addElement(labelValue("TRANSACTION REF", payment.getTransactionReference()));
+        }
+        metaTable.addCell(left);
+
+        // Right column
+        PdfPCell right = new PdfPCell();
+        right.setBorder(Rectangle.NO_BORDER);
+        right.setPadding(0);
+        right.addElement(labelValue("INVOICE #", payment.getInvoice().getInvoiceNumber()));
+        right.addElement(labelValue("INVOICE DATE", payment.getInvoice().getIssueDate().format(DATE_FMT)));
+        right.addElement(labelValue("INVOICE AMOUNT", "LKR " + fmt2(payment.getInvoice().getTotalAmount())));
+        if (payment.getRemarks() != null && !payment.getRemarks().isBlank()) {
+            right.addElement(labelValue("REMARKS", payment.getRemarks()));
+        }
+        metaTable.addCell(right);
+
+        doc.add(metaTable);
     }
 }
