@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { UserPlus, ArrowLeft, AlertCircle } from "lucide-react";
+import { UserPlus, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { authService } from "@/services/authService";
+import { ValidationRules } from "@/lib/validationHelpers";
 
 interface AdminRegistrationProps {
   onBack?: () => void;
@@ -17,6 +18,10 @@ interface AdminRegistrationProps {
 
 interface FieldErrors {
   [key: string]: string;
+}
+
+interface FieldValidation {
+  [key: string]: string | null; // null = valid, string = error message
 }
 
 export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
@@ -27,6 +32,64 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [assignedArea, setAssignedArea] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [fieldValidations, setFieldValidations] = useState<FieldValidation>({}); // Real-time validation
+
+  // Real-time validation handlers
+  const validateField = (name: string, value: string) => {
+    let error: string | null = null;
+
+    switch (name) {
+      case "username":
+        error = ValidationRules.validateUsername(value);
+        break;
+      case "password":
+        error = ValidationRules.validatePassword(value);
+        break;
+      case "fullName":
+        error = ValidationRules.validateFullName(value);
+        break;
+      case "email":
+        error = ValidationRules.validateEmail(value);
+        break;
+      case "nicNumber":
+        if (value && selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR") {
+          error = ValidationRules.validateNIC(value);
+        }
+        break;
+      case "mobileNumber":
+        if (value && selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR") {
+          error = ValidationRules.validatePhoneNumber(value);
+        }
+        break;
+      case "emergencyContact":
+        if (value && selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR") {
+          error = ValidationRules.validatePhoneNumber(value);
+        }
+        break;
+      case "dateOfBirth":
+        if (value && selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR") {
+          error = ValidationRules.validateDateOfBirth(value);
+        }
+        break;
+      case "residentialAddress":
+        if (value && selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR") {
+          error = ValidationRules.validateResidentialAddress(value);
+        }
+        break;
+      case "bankAccountNumber":
+        if (value && selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR") {
+          error = ValidationRules.validateBankAccount(value);
+        }
+        break;
+      default:
+        break;
+    }
+
+    setFieldValidations((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -57,24 +120,24 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
         password: get("password"),
         role: selectedRole,
         fullName: get("fullName"),
-        nicNumber: isSimplifiedRole ? undefined : get("nicNumber"),
-        sex: isSimplifiedRole ? undefined : (selectedSex || undefined),
+        nicNumber: isSimplifiedRole ? "N/A" : get("nicNumber"),
+        sex: isSimplifiedRole ? "N/A" : selectedSex || "N/A",
         email: get("email"),
-        mobileNumber: isSimplifiedRole ? undefined : get("mobileNumber"),
-        dateOfBirth: isSimplifiedRole ? undefined : (get("dateOfBirth") || undefined),
-        emergencyContact: isSimplifiedRole ? undefined : (get("emergencyContact") || undefined),
-        emergencyContactPersonName: isSimplifiedRole ? undefined : (get("emergencyContactPersonName") || undefined),
-        bloodGroup: isSimplifiedRole ? undefined : (selectedBloodGroup || undefined),
-        residentialAddress: isSimplifiedRole ? undefined : (get("residentialAddress") || undefined),
-        basicSalary: isSimplifiedRole ? undefined : (get("basicSalary") ? Number(get("basicSalary")) : undefined),
-        assignedArea: selectedRole === "AREA_MANAGER" ? assignedArea.trim() : undefined,
-        adminPosition: isSimplifiedRole ? undefined : (get("adminPosition") || undefined),
-        professionalCertificate: isSimplifiedRole ? undefined : (get("professionalCertificate") || undefined),
-        joinDate: isSimplifiedRole ? undefined : (get("joinDate") || undefined),
-        specialSkills: isSimplifiedRole ? undefined : (get("specialSkills") || undefined),
-        bankName: isSimplifiedRole ? undefined : (get("bankName") || undefined),
-        bankAccountNumber: isSimplifiedRole ? undefined : (get("bankAccountNumber") || undefined),
-        bankBranch: isSimplifiedRole ? undefined : (get("bankBranch") || undefined),
+        mobileNumber: isSimplifiedRole ? "N/A" : get("mobileNumber"),
+        dateOfBirth: isSimplifiedRole ? "1900-01-01" : (get("dateOfBirth") || "1900-01-01"),
+        emergencyContact: isSimplifiedRole ? "N/A" : (get("emergencyContact") || "N/A"),
+        emergencyContactPersonName: isSimplifiedRole ? "N/A" : (get("emergencyContactPersonName") || "N/A"),
+        bloodGroup: isSimplifiedRole ? "N/A" : (selectedBloodGroup || "N/A"),
+        residentialAddress: isSimplifiedRole ? "N/A" : (get("residentialAddress") || "N/A"),
+        basicSalary: isSimplifiedRole ? 0 : (get("basicSalary") ? Number(get("basicSalary")) : 0),
+        assignedArea: selectedRole === "AREA_MANAGER" ? assignedArea.trim() : "N/A",
+        adminPosition: isSimplifiedRole ? "N/A" : (get("adminPosition") || "N/A"),
+        professionalCertificate: isSimplifiedRole ? "N/A" : (get("professionalCertificate") || "N/A"),
+        joinDate: isSimplifiedRole ? "1900-01-01" : (get("joinDate") || "1900-01-01"),
+        specialSkills: isSimplifiedRole ? "N/A" : (get("specialSkills") || "N/A"),
+        bankName: isSimplifiedRole ? "N/A" : (get("bankName") || "N/A"),
+        bankAccountNumber: isSimplifiedRole ? "N/A" : (get("bankAccountNumber") || "N/A"),
+        bankBranch: isSimplifiedRole ? "N/A" : (get("bankBranch") || "N/A"),
       };
 
       await authService.registerUser(data, photo || undefined);
@@ -85,6 +148,7 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
       setSelectedBloodGroup("");
       setPhoto(null);
       setAssignedArea("");
+      setFieldValidations({});
     } catch (err: any) {
       // Prefer structured field errors from API (via authService)
       const errors: FieldErrors = {};
@@ -179,9 +243,34 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
         {/* Login Credentials */}
         <Section title="Login Credentials">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="Username" name="username" required error={fieldErrors.username} />
-            <Field label="Password" name="password" type="password" required error={fieldErrors.password} />
-            <Field label="Full Name" name="fullName" required error={fieldErrors.fullName} />
+            <FieldWithValidation 
+              label="Username" 
+              name="username" 
+              required 
+              error={fieldErrors.username} 
+              validation={fieldValidations.username}
+              onBlur={(e) => validateField("username", e.currentTarget.value)}
+              onInput={(e) => validateField("username", e.currentTarget.value)}
+            />
+            <FieldWithValidation 
+              label="Password" 
+              name="password" 
+              type="password" 
+              required 
+              error={fieldErrors.password}
+              validation={fieldValidations.password}
+              onBlur={(e) => validateField("password", e.currentTarget.value)}
+              onInput={(e) => validateField("password", e.currentTarget.value)}
+            />
+            <FieldWithValidation 
+              label="Full Name" 
+              name="fullName" 
+              required 
+              error={fieldErrors.fullName}
+              validation={fieldValidations.fullName}
+              onBlur={(e) => validateField("fullName", e.currentTarget.value)}
+              onInput={(e) => validateField("fullName", e.currentTarget.value)}
+            />
             <div className="space-y-2">
               <Label>Role <span className="text-destructive">*</span></Label>
               <Select required value={selectedRole} onValueChange={setSelectedRole}>
@@ -215,7 +304,15 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
         <Section title="Personal Information">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
-              <Field label="NIC Number" name="nicNumber" required error={fieldErrors.nicNumber} />
+              <FieldWithValidation 
+                label="NIC Number" 
+                name="nicNumber" 
+                required 
+                error={fieldErrors.nicNumber}
+                validation={fieldValidations.nicNumber}
+                onBlur={(e) => validateField("nicNumber", e.currentTarget.value)}
+                onInput={(e) => validateField("nicNumber", e.currentTarget.value)}
+              />
             )}
             {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" ? (
               <div className="space-y-2">
@@ -231,12 +328,37 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
                 {fieldErrors.sex && <p className="text-xs text-destructive">{fieldErrors.sex}</p>}
               </div>
             ) : null}
-            <Field label="Email" name="email" type="email" required error={fieldErrors.email} />
+            <FieldWithValidation 
+              label="Email" 
+              name="email" 
+              type="email" 
+              required 
+              error={fieldErrors.email}
+              validation={fieldValidations.email}
+              onBlur={(e) => validateField("email", e.currentTarget.value)}
+              onInput={(e) => validateField("email", e.currentTarget.value)}
+            />
             {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
-              <Field label="Mobile Number" name="mobileNumber" required error={fieldErrors.mobileNumber} />
+              <FieldWithValidation 
+                label="Mobile Number" 
+                name="mobileNumber" 
+                required 
+                error={fieldErrors.mobileNumber}
+                validation={fieldValidations.mobileNumber}
+                onBlur={(e) => validateField("mobileNumber", e.currentTarget.value)}
+                onInput={(e) => validateField("mobileNumber", e.currentTarget.value)}
+              />
             )}
             {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
-              <Field label="Date of Birth" name="dateOfBirth" type="date" required error={fieldErrors.dateOfBirth} />
+              <FieldWithValidation 
+                label="Date of Birth" 
+                name="dateOfBirth" 
+                type="date" 
+                required 
+                error={fieldErrors.dateOfBirth}
+                validation={fieldValidations.dateOfBirth}
+                onBlur={(e) => validateField("dateOfBirth", e.currentTarget.value)}
+              />
             )}
             {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" ? (
               <div className="space-y-2">
@@ -254,16 +376,36 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
               </div>
             ) : null}
             {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
-              <Field label="Emergency Contact Number" name="emergencyContact" required error={fieldErrors.emergencyContact} />
+              <FieldWithValidation 
+                label="Emergency Contact Number" 
+                name="emergencyContact" 
+                required 
+                error={fieldErrors.emergencyContact}
+                validation={fieldValidations.emergencyContact}
+                onBlur={(e) => validateField("emergencyContact", e.currentTarget.value)}
+                onInput={(e) => validateField("emergencyContact", e.currentTarget.value)}
+              />
             )}
             {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" && (
-              <Field label="Emergency Contact Person Name" name="emergencyContactPersonName" required error={fieldErrors.emergencyContactPersonName} />
+              <FieldWithValidation 
+                label="Emergency Contact Person Name" 
+                name="emergencyContactPersonName" 
+                required 
+                error={fieldErrors.emergencyContactPersonName}
+              />
             )}
           </div>
           {selectedRole !== "CHAIRMAN" && selectedRole !== "DIRECTOR" ? (
             <div className="mt-4 space-y-2">
               <Label>Residential Address <span className="text-destructive">*</span></Label>
-              <Textarea name="residentialAddress" className={`mt-2 ${fieldErrors.residentialAddress ? "border-destructive" : ""}`} required />
+              <Textarea 
+                name="residentialAddress" 
+                className={`mt-2 ${fieldErrors.residentialAddress ? "border-destructive" : ""}`} 
+                required 
+                onBlur={(e) => validateField("residentialAddress", e.currentTarget.value)}
+                onInput={(e) => validateField("residentialAddress", e.currentTarget.value)}
+              />
+              {fieldValidations.residentialAddress && <p className="text-xs text-destructive">{fieldValidations.residentialAddress}</p>}
               {fieldErrors.residentialAddress && <p className="text-xs text-destructive">{fieldErrors.residentialAddress}</p>}
             </div>
           ) : null}
@@ -287,7 +429,14 @@ export default function AdminRegistration({ onBack }: AdminRegistrationProps) {
         <Section title="Bank Details">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Bank Name" name="bankName" error={fieldErrors.bankName} />
-            <Field label="Account Number" name="bankAccountNumber" error={fieldErrors.bankAccountNumber} />
+            <FieldWithValidation 
+              label="Account Number" 
+              name="bankAccountNumber" 
+              error={fieldErrors.bankAccountNumber}
+              validation={fieldValidations.bankAccountNumber}
+              onBlur={(e) => validateField("bankAccountNumber", e.currentTarget.value)}
+              onInput={(e) => validateField("bankAccountNumber", e.currentTarget.value)}
+            />
             <Field label="Branch" name="bankBranch" error={fieldErrors.bankBranch} />
           </div>
         </Section>
@@ -332,6 +481,52 @@ function Field({ label, name, type = "text", required = false, error }: { label:
         className={error ? "border-destructive focus-visible:ring-destructive" : ""}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+interface FieldWithValidationProps {
+  label: string;
+  name: string;
+  type?: string;
+  required?: boolean;
+  error?: string;
+  validation?: string | null;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onInput?: (e: React.FormEvent<HTMLInputElement>) => void;
+}
+
+function FieldWithValidation({ 
+  label, 
+  name, 
+  type = "text", 
+  required = false, 
+  error,
+  validation,
+  onBlur,
+  onInput 
+}: FieldWithValidationProps) {
+  const hasError = error || validation;
+  const errorMsg = error || validation;
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label} {required && <span className="text-destructive">*</span>}</Label>
+      <div className="relative">
+        <Input 
+          id={name} 
+          name={name} 
+          type={type} 
+          required={required}
+          className={`${hasError ? "border-destructive focus-visible:ring-destructive" : ""} ${!hasError && validation === null && (document.getElementById(name) as HTMLInputElement)?.value ? "border-green-500" : ""}`}
+          onBlur={onBlur}
+          onInput={onInput}
+        />
+        {!hasError && validation === null && (document.getElementById(name) as HTMLInputElement)?.value && (
+          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
+        )}
+      </div>
+      {errorMsg && <p className="text-xs text-destructive">{errorMsg}</p>}
     </div>
   );
 }

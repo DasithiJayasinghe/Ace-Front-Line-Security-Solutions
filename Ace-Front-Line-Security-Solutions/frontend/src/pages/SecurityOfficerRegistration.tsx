@@ -8,12 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Shield, ArrowLeft, AlertCircle } from "lucide-react";
+import { Shield, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { authService } from "@/services/authService";
+import { ValidationRules } from "@/lib/validationHelpers";
 
 interface FieldErrors {
   [key: string]: string;
+}
+
+interface FieldValidation {
+  [key: string]: string | null; // null = valid, string = error message
 }
 
 const designationLabels: Record<string, string> = {
@@ -36,11 +41,69 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
   const [selectedBloodGroup, setSelectedBloodGroup] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [fieldValidations, setFieldValidations] = useState<FieldValidation>({}); // Real-time validation
 
   const toggleEquipment = (eq: Equipment) => {
     setSelectedEquipment((prev) =>
       prev.includes(eq) ? prev.filter((e) => e !== eq) : [...prev, eq]
     );
+  };
+
+  // Real-time validation handlers
+  const validateField = (name: string, value: string) => {
+    let error: string | null = null;
+
+    switch (name) {
+      case "so_username":
+        error = ValidationRules.validateUsername(value);
+        break;
+      case "so_password":
+        error = ValidationRules.validatePassword(value);
+        break;
+      case "so_fullName":
+        error = ValidationRules.validateFullName(value);
+        break;
+      case "so_email":
+        error = ValidationRules.validateEmail(value);
+        break;
+      case "so_nicNumber":
+        if (value) {
+          error = ValidationRules.validateNIC(value);
+        }
+        break;
+      case "so_mobileNumber":
+        if (value) {
+          error = ValidationRules.validatePhoneNumber(value);
+        }
+        break;
+      case "so_emergencyContact":
+        if (value) {
+          error = ValidationRules.validatePhoneNumber(value);
+        }
+        break;
+      case "so_dateOfBirth":
+        if (value) {
+          error = ValidationRules.validateDateOfBirth(value);
+        }
+        break;
+      case "so_residentialAddress":
+        if (value) {
+          error = ValidationRules.validateResidentialAddress(value);
+        }
+        break;
+      case "so_bankAccountNumber":
+        if (value) {
+          error = ValidationRules.validateBankAccount(value);
+        }
+        break;
+      default:
+        break;
+    }
+
+    setFieldValidations((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -102,6 +165,7 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
       setSelectedBloodGroup("");
       setSelectedEquipment([]);
       setPhoto(null);
+      setFieldValidations({});
     } catch (err: any) {
       const errors: FieldErrors = {};
       if (err?.fieldErrors && typeof err.fieldErrors === "object") {
@@ -193,16 +257,49 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
         {/* Login Credentials */}
         <Section title="Login Credentials">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Username" name="so_username" required error={fieldErrors.username} />
-            <Field label="Password" name="so_password" type="password" required error={fieldErrors.password} />
+            <FieldWithValidation 
+              label="Username" 
+              name="so_username" 
+              required 
+              error={fieldErrors.username}
+              validation={fieldValidations.so_username}
+              onBlur={(e) => validateField("so_username", e.currentTarget.value)}
+              onInput={(e) => validateField("so_username", e.currentTarget.value)}
+            />
+            <FieldWithValidation 
+              label="Password" 
+              name="so_password" 
+              type="password" 
+              required 
+              error={fieldErrors.password}
+              validation={fieldValidations.so_password}
+              onBlur={(e) => validateField("so_password", e.currentTarget.value)}
+              onInput={(e) => validateField("so_password", e.currentTarget.value)}
+            />
           </div>
         </Section>
 
         {/* Personal Information */}
         <Section title="Personal Information">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Full Name" name="so_fullName" required error={fieldErrors.fullName} />
-            <Field label="NIC Number" name="so_nicNumber" required error={fieldErrors.nicNumber} />
+            <FieldWithValidation 
+              label="Full Name" 
+              name="so_fullName" 
+              required 
+              error={fieldErrors.fullName}
+              validation={fieldValidations.so_fullName}
+              onBlur={(e) => validateField("so_fullName", e.currentTarget.value)}
+              onInput={(e) => validateField("so_fullName", e.currentTarget.value)}
+            />
+            <FieldWithValidation 
+              label="NIC Number" 
+              name="so_nicNumber" 
+              required 
+              error={fieldErrors.nicNumber}
+              validation={fieldValidations.so_nicNumber}
+              onBlur={(e) => validateField("so_nicNumber", e.currentTarget.value)}
+              onInput={(e) => validateField("so_nicNumber", e.currentTarget.value)}
+            />
             <div className="space-y-2">
               <Label>Sex <span className="text-destructive">*</span></Label>
               <Select required value={selectedSex} onValueChange={setSelectedSex}>
@@ -215,9 +312,34 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
               </Select>
               {fieldErrors.sex && <p className="text-xs text-destructive">{fieldErrors.sex}</p>}
             </div>
-            <Field label="Email" name="so_email" type="email" required error={fieldErrors.email} />
-            <Field label="Mobile Number" name="so_mobileNumber" required error={fieldErrors.mobileNumber} />
-            <Field label="Date of Birth" name="so_dateOfBirth" type="date" required error={fieldErrors.dateOfBirth} />
+            <FieldWithValidation 
+              label="Email" 
+              name="so_email" 
+              type="email" 
+              required 
+              error={fieldErrors.email}
+              validation={fieldValidations.so_email}
+              onBlur={(e) => validateField("so_email", e.currentTarget.value)}
+              onInput={(e) => validateField("so_email", e.currentTarget.value)}
+            />
+            <FieldWithValidation 
+              label="Mobile Number" 
+              name="so_mobileNumber" 
+              required 
+              error={fieldErrors.mobileNumber}
+              validation={fieldValidations.so_mobileNumber}
+              onBlur={(e) => validateField("so_mobileNumber", e.currentTarget.value)}
+              onInput={(e) => validateField("so_mobileNumber", e.currentTarget.value)}
+            />
+            <FieldWithValidation 
+              label="Date of Birth" 
+              name="so_dateOfBirth" 
+              type="date" 
+              required 
+              error={fieldErrors.dateOfBirth}
+              validation={fieldValidations.so_dateOfBirth}
+              onBlur={(e) => validateField("so_dateOfBirth", e.currentTarget.value)}
+            />
             <div className="space-y-2">
               <Label>Blood Group</Label>
               <Select value={selectedBloodGroup} onValueChange={setSelectedBloodGroup}>
@@ -229,12 +351,32 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
                 </SelectContent>
               </Select>
             </div>
-            <Field label="Emergency Contact Number" name="so_emergencyContact" required error={fieldErrors.emergencyContact} />
-            <Field label="Emergency Contact Person Name" name="so_emergencyContactPersonName" required error={fieldErrors.emergencyContactPersonName} />
+            <FieldWithValidation 
+              label="Emergency Contact Number" 
+              name="so_emergencyContact" 
+              required 
+              error={fieldErrors.emergencyContact}
+              validation={fieldValidations.so_emergencyContact}
+              onBlur={(e) => validateField("so_emergencyContact", e.currentTarget.value)}
+              onInput={(e) => validateField("so_emergencyContact", e.currentTarget.value)}
+            />
+            <FieldWithValidation 
+              label="Emergency Contact Person Name" 
+              name="so_emergencyContactPersonName" 
+              required 
+              error={fieldErrors.emergencyContactPersonName}
+            />
           </div>
           <div className="mt-4 space-y-2">
             <Label>Residential Address <span className="text-destructive">*</span></Label>
-            <Textarea name="so_residentialAddress" className={`mt-2 ${fieldErrors.residentialAddress ? "border-destructive" : ""}`} required />
+            <Textarea 
+              name="so_residentialAddress" 
+              className={`mt-2 ${fieldErrors.residentialAddress ? "border-destructive" : ""}`} 
+              required 
+              onBlur={(e) => validateField("so_residentialAddress", e.currentTarget.value)}
+              onInput={(e) => validateField("so_residentialAddress", e.currentTarget.value)}
+            />
+            {fieldValidations.so_residentialAddress && <p className="text-xs text-destructive">{fieldValidations.so_residentialAddress}</p>}
             {fieldErrors.residentialAddress && <p className="text-xs text-destructive">{fieldErrors.residentialAddress}</p>}
           </div>
         </Section>
@@ -284,7 +426,14 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
         <Section title="Bank Details">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Bank Name" name="so_bankName" error={fieldErrors.bankName} />
-            <Field label="Account Number" name="so_bankAccountNumber" error={fieldErrors.bankAccountNumber} />
+            <FieldWithValidation 
+              label="Account Number" 
+              name="so_bankAccountNumber" 
+              error={fieldErrors.bankAccountNumber}
+              validation={fieldValidations.so_bankAccountNumber}
+              onBlur={(e) => validateField("so_bankAccountNumber", e.currentTarget.value)}
+              onInput={(e) => validateField("so_bankAccountNumber", e.currentTarget.value)}
+            />
             <Field label="Branch" name="so_bankBranch" error={fieldErrors.bankBranch} />
           </div>
         </Section>
@@ -308,6 +457,7 @@ export default function SecurityOfficerRegistration({ onBack }: SecurityOfficerR
             setSelectedDesignation("");
             setSelectedEquipment([]);
             setPhoto(null);
+            setFieldValidations({});
           }}>Reset</Button>
         </div>
       </form>
@@ -336,6 +486,52 @@ function Field({ label, name, type = "text", required = false, error }: { label:
         className={error ? "border-destructive focus-visible:ring-destructive" : ""}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+interface FieldWithValidationProps {
+  label: string;
+  name: string;
+  type?: string;
+  required?: boolean;
+  error?: string;
+  validation?: string | null;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onInput?: (e: React.FormEvent<HTMLInputElement>) => void;
+}
+
+function FieldWithValidation({ 
+  label, 
+  name, 
+  type = "text", 
+  required = false, 
+  error,
+  validation,
+  onBlur,
+  onInput 
+}: FieldWithValidationProps) {
+  const hasError = error || validation;
+  const errorMsg = error || validation;
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label} {required && <span className="text-destructive">*</span>}</Label>
+      <div className="relative">
+        <Input 
+          id={name} 
+          name={name} 
+          type={type} 
+          required={required}
+          className={`${hasError ? "border-destructive focus-visible:ring-destructive" : ""} ${!hasError && validation === null && (document.getElementById(name) as HTMLInputElement)?.value ? "border-green-500" : ""}`}
+          onBlur={onBlur}
+          onInput={onInput}
+        />
+        {!hasError && validation === null && (document.getElementById(name) as HTMLInputElement)?.value && (
+          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
+        )}
+      </div>
+      {errorMsg && <p className="text-xs text-destructive">{errorMsg}</p>}
     </div>
   );
 }
