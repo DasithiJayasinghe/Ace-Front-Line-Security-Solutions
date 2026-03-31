@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import "./MonthlyStatistics.css";
-
-const MANAGER_ID = 1;
 const MAX_SHIFTS_FOR_OT = 60;
 const OT_HOURS_PER_SHIFT = 3;
 
@@ -11,9 +9,17 @@ interface StatRow {
   officerName: string;
   monthlyShifts: number;
   monthlyOvertimeHours: number;
+  monthlyTotalHoursWorked: number;
+  branchName?: string;
+  areaManagerName?: string;
 }
 
-export default function MonthlyStatistics() {
+interface MonthlyStatisticsProps {
+  /** When true, load merged statistics from every area manager (accountant dashboard). */
+  forAccountant?: boolean;
+}
+
+export default function MonthlyStatistics({ forAccountant = false }: MonthlyStatisticsProps) {
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(() => {
     const d = new Date();
@@ -32,7 +38,14 @@ export default function MonthlyStatistics() {
     try {
       const mo = parseInt(month, 10);
       const yr = year;
-      const res = await fetch(`/api/monthly-statistics/manager/${MANAGER_ID}?month=${mo}&year=${yr}`);
+
+      const email = localStorage.getItem("loggedInEmail")?.trim();
+      const url = forAccountant
+        ? `/api/monthly-statistics/all-area-managers?month=${mo}&year=${yr}`
+        : `/api/monthly-statistics/me?month=${mo}&year=${yr}`;
+      const res = await fetch(url, {
+        headers: !forAccountant && email ? { "X-User-Email": email } : {},
+      });
       const data = await res.json();
       const rows: StatRow[] = Array.isArray(data) ? data : [];
       setStats(rows);
@@ -46,7 +59,7 @@ export default function MonthlyStatistics() {
 
   useEffect(() => {
     loadData();
-  }, [month, year]);
+  }, [month, year, forAccountant]);
 
   const monthLabel = (() => {
     const mo = parseInt(month, 10);
@@ -76,7 +89,6 @@ export default function MonthlyStatistics() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          monthlyShifts: editMonthlyShifts,
           monthlyOvertimeHours: editMonthlyOvertimeHours,
         }),
       });
@@ -120,7 +132,9 @@ export default function MonthlyStatistics() {
       <div className="header">
         <h2>Monthly Statistics</h2>
         <p>
-          Monthly shifts are calculated from approved shift assignments. Monthly OT hours come from attendance overtime hours.
+          {forAccountant
+            ? "Consolidated view of all area managers: same shift and attendance rules as each manager’s monthly statistics."
+            : "Monthly shifts are calculated from approved shift assignments. Monthly OT hours come from attendance overtime hours."}
         </p>
       </div>
 
@@ -150,33 +164,39 @@ export default function MonthlyStatistics() {
         <table className="stats-table">
           <thead>
             <tr>
+              {forAccountant && <th>Branch</th>}
+              {forAccountant && <th>Area Manager</th>}
               <th>Security ID</th>
               <th>Officer Name</th>
               <th>Monthly Shifts</th>
               <th>Monthly OT Hours</th>
+              <th>Total Hours Worked</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="empty-state">
+                <td colSpan={forAccountant ? 8 : 6} className="empty-state">
                   Loading…
                 </td>
               </tr>
             ) : stats.length === 0 ? (
               <tr>
-                <td colSpan={5} className="empty-state">
+                <td colSpan={forAccountant ? 8 : 6} className="empty-state">
                   No officers or no data for {monthLabel}.
                 </td>
               </tr>
             ) : (
               stats.map((row) => (
                 <tr key={row.id}>
+                  {forAccountant && <td>{row.branchName ?? "—"}</td>}
+                  {forAccountant && <td>{row.areaManagerName ?? "—"}</td>}
                   <td>{row.securityId}</td>
                   <td>{row.officerName}</td>
                   <td>{Number(row.monthlyShifts ?? 0)}</td>
                   <td>{Number(row.monthlyOvertimeHours ?? 0).toFixed(2)}</td>
+                  <td>{Number(row.monthlyTotalHoursWorked ?? 0).toFixed(2)}</td>
                   <td>
                     <button
                       type="button"
@@ -224,13 +244,8 @@ export default function MonthlyStatistics() {
 
             <div className="monthly-edit-form">
               <label>
-                Monthly Shifts
-                <input
-                  type="number"
-                  min={0}
-                  value={editMonthlyShifts}
-                  onChange={(e) => setEditMonthlyShifts(parseInt(e.target.value, 10) || 0)}
-                />
+                Monthly Shifts (from approved schedule)
+                <input type="number" readOnly value={editRow.monthlyShifts} />
               </label>
               <label>
                 Monthly OT Hours

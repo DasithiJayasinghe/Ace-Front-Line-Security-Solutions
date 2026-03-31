@@ -39,6 +39,9 @@ public class MonthlyStatistics {
     private Double monthlyOvertimeHours;
 
     @Column(nullable = false)
+    private Double monthlyTotalHoursWorked;
+
+    @Column(nullable = false)
     private LocalDateTime generatedAt;
 }
 

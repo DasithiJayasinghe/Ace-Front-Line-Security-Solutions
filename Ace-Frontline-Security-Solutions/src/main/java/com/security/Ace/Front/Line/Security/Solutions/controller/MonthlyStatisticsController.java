@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/monthly-statistics")
-@CrossOrigin(origins = "*")
 public class MonthlyStatisticsController {
 
     @Autowired
@@ -23,6 +22,26 @@ public class MonthlyStatisticsController {
             @RequestParam int year) {
         List<MonthlyStatisticsDTO> stats =
                 monthlyStatisticsService.getMonthlyStatistics(managerId, month, year);
+        return ResponseEntity.ok(stats);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<MonthlyStatisticsDTO>> getMonthlyStatisticsForCurrentAreaManager(
+            @RequestHeader(value = "X-User-Email", required = false) String areaManagerEmail,
+            @RequestParam int month,
+            @RequestParam int year) {
+        List<MonthlyStatisticsDTO> stats =
+                monthlyStatisticsService.getMonthlyStatisticsForAreaManagerEmail(areaManagerEmail, month, year);
+        return ResponseEntity.ok(stats);
+    }
+
+    /** Consolidated rows from every area manager — used by the accountant monthly statistics page. */
+    @GetMapping("/all-area-managers")
+    public ResponseEntity<List<MonthlyStatisticsDTO>> getConsolidatedMonthlyStatisticsForAccountant(
+            @RequestParam int month,
+            @RequestParam int year) {
+        List<MonthlyStatisticsDTO> stats =
+                monthlyStatisticsService.getConsolidatedMonthlyStatisticsForAccountant(month, year);
         return ResponseEntity.ok(stats);
     }
 

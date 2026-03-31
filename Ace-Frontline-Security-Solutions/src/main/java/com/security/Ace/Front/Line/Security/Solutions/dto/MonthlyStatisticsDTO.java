@@ -13,5 +13,9 @@ public class MonthlyStatisticsDTO {
     private String officerName;
     private Integer monthlyShifts;
     private Double monthlyOvertimeHours;
+    private Double monthlyTotalHoursWorked;
+    /** Set when returning consolidated stats for accountant (all area managers). */
+    private String branchName;
+    private String areaManagerName;
 }
 
