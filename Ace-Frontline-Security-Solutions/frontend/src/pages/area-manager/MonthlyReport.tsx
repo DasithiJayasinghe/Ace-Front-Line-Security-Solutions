@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Pencil, Trash2, Loader2 } from "lucide-react";
 import "./MonthlyReport.css";
 
-const MANAGER_ID = 1;
-
 interface MonthlyReportRecord {
   id: number;
   monthName: string;
@@ -56,19 +54,22 @@ export default function MonthlyReport() {
   const [editLoadingId, setEditLoadingId] = useState<number | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     problemsFaced: "",
     rootCauses: "",
     mitigationSteps: "",
     complaintsReceived: "",
     additionalNotes: "",
-    status: "DRAFT",
   });
 
   async function loadReports() {
     setReportsLoading(true);
     try {
-      const res = await fetch(`/api/monthly-reports/manager/${MANAGER_ID}`);
+      const email = localStorage.getItem("loggedInEmail")?.trim();
+      const res = await fetch(`/api/monthly-reports/me`, {
+        headers: email ? { "X-User-Email": email } : {},
+      });
       const data = await res.json();
       setReports(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -81,6 +82,8 @@ export default function MonthlyReport() {
 
   useEffect(() => {
     loadReports();
+    const timer = setInterval(loadReports, 15000);
+    return () => clearInterval(timer);
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -96,9 +99,13 @@ export default function MonthlyReport() {
       status: "DRAFT",
     };
     try {
+      const email = localStorage.getItem("loggedInEmail")?.trim();
       const res = await fetch("/api/monthly-reports", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(email ? { "X-User-Email": email } : {}),
+        },
         body: JSON.stringify(payload),
       });
       if (res.ok) {
@@ -152,7 +159,6 @@ export default function MonthlyReport() {
         mitigationSteps: data.mitigationSteps ?? "",
         complaintsReceived: data.complaintsReceived ?? "",
         additionalNotes: data.additionalNotes ?? "",
-        status: data.status ?? "DRAFT",
       });
       setEditModalOpen(true);
     } catch (e) {
@@ -173,7 +179,7 @@ export default function MonthlyReport() {
       mitigationSteps: editForm.mitigationSteps,
       complaintsReceived: editForm.complaintsReceived || null,
       additionalNotes: editForm.additionalNotes || null,
-      status: editForm.status,
+      status: editReport.status,
     };
     try {
       const res = await fetch(`/api/monthly-reports/${editReport.id}`, {
@@ -218,6 +224,32 @@ export default function MonthlyReport() {
       alert("Failed to delete report. Check the console and that the backend is running.");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleSubmitForReview(id: number) {
+    const confirmed = window.confirm("Submit this monthly report to chairman for review?");
+    if (!confirmed) return;
+
+    setSubmittingId(id);
+    try {
+      const email = localStorage.getItem("loggedInEmail")?.trim();
+      const res = await fetch(`/api/monthly-reports/${id}/submit`, {
+        method: "POST",
+        headers: email ? { "X-User-Email": email } : {},
+      });
+      if (res.ok) {
+        await loadReports();
+        alert("Report submitted to chairman successfully.");
+      } else {
+        const error = await res.text();
+        alert("Failed to submit report: " + (error || res.statusText));
+      }
+    } catch (e) {
+      console.error("Error submitting report:", e);
+      alert("Failed to submit report. Check the console and network.");
+    } finally {
+      setSubmittingId(null);
     }
   }
 
@@ -313,7 +345,7 @@ export default function MonthlyReport() {
             </div>
 
             <button type="submit" className="btn btn-primary">
-              Submit Report
+              Save as Draft
             </button>
             <button type="button" className="btn btn-secondary" onClick={handleClear}>
               Clear Form
@@ -364,7 +396,7 @@ export default function MonthlyReport() {
                         type="button"
                         className="btn-action btn-edit"
                         onClick={() => startEdit(report.id)}
-                        disabled={editLoadingId !== null}
+                        disabled={editLoadingId !== null || report.status === "SUBMITTED" || report.status === "APPROVED"}
                         title="Edit report"
                       >
                         {editLoadingId === report.id ? (
@@ -374,11 +406,22 @@ export default function MonthlyReport() {
                         )}
                         Edit
                       </button>
+                      {(report.status === "DRAFT" || report.status === "REJECTED") && (
+                        <button
+                          type="button"
+                          className="btn-action btn-submit"
+                          onClick={() => handleSubmitForReview(report.id)}
+                          disabled={submittingId !== null}
+                          title="Submit to chairman"
+                        >
+                          {submittingId === report.id ? <Loader2 className="spin" size={16} /> : "Submit"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn-action btn-delete"
                         onClick={() => handleDelete(report.id)}
-                        disabled={deletingId !== null}
+                        disabled={deletingId !== null || report.status === "SUBMITTED" || report.status === "APPROVED"}
                         title="Delete report"
                       >
                         {deletingId === report.id ? (
@@ -455,15 +498,7 @@ export default function MonthlyReport() {
               </div>
               <div className="form-group">
                 <label>Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
-                >
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="SUBMITTED">SUBMITTED</option>
-                  <option value="APPROVED">APPROVED</option>
-                  <option value="REJECTED">REJECTED</option>
-                </select>
+                <input value={editReport.status} readOnly />
               </div>
               <div className="modal-actions">
                 <button

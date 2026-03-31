@@ -3,8 +3,10 @@ package com.security.Ace.Front.Line.Security.Solutions.service;
 import com.security.Ace.Front.Line.Security.Solutions.dto.MonthlyReportDTO;
 import com.security.Ace.Front.Line.Security.Solutions.entity.AreaManager;
 import com.security.Ace.Front.Line.Security.Solutions.entity.MonthlyReport;
+import com.security.Ace.Front.Line.Security.Solutions.entity.User;
 import com.security.Ace.Front.Line.Security.Solutions.repository.AreaManagerRepository;
 import com.security.Ace.Front.Line.Security.Solutions.repository.MonthlyReportRepository;
+import com.security.Ace.Front.Line.Security.Solutions.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +25,9 @@ public class MonthlyReportService {
 
     @Autowired
     private AreaManagerRepository areaManagerRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Transactional
     public MonthlyReportDTO createMonthlyReport(MonthlyReportDTO dto, Long managerId) {
@@ -50,6 +56,12 @@ public class MonthlyReportService {
     }
 
     @Transactional
+    public MonthlyReportDTO createMonthlyReportForAreaManagerEmail(MonthlyReportDTO dto, String areaManagerEmail) {
+        AreaManager manager = resolveOrCreateAreaManagerByEmail(areaManagerEmail);
+        return createMonthlyReport(dto, manager.getId());
+    }
+
+    @Transactional
     public MonthlyReportDTO updateMonthlyReport(Long id, MonthlyReportDTO dto) {
         MonthlyReport report = monthlyReportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Monthly report not found"));
@@ -69,6 +81,60 @@ public class MonthlyReportService {
         return monthlyReportRepository.findByManagerOrderByDate(managerId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Read-only monthly report list for chairman oversight across all area managers.
+     */
+    public List<MonthlyReportDTO> getAllReportsForChairmanView() {
+        return monthlyReportRepository.findAllOrderByPeriodAndDateDesc().stream()
+                .filter(r -> r.getStatus() != null && !"DRAFT".equalsIgnoreCase(r.getStatus()))
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public MonthlyReportDTO submitReport(Long id, String areaManagerEmail) {
+        MonthlyReport report = monthlyReportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Monthly report not found"));
+
+        AreaManager manager = resolveOrCreateAreaManagerByEmail(areaManagerEmail);
+        if (report.getAreaManager() == null || !report.getAreaManager().getId().equals(manager.getId())) {
+            throw new RuntimeException("You can only submit your own monthly report");
+        }
+
+        String current = report.getStatus() != null ? report.getStatus().trim().toUpperCase() : "DRAFT";
+        if (!"DRAFT".equals(current) && !"REJECTED".equals(current)) {
+            throw new RuntimeException("Only DRAFT or REJECTED reports can be submitted");
+        }
+
+        report.setStatus("SUBMITTED");
+        return convertToDTO(monthlyReportRepository.save(report));
+    }
+
+    @Transactional
+    public MonthlyReportDTO reviewSubmittedReport(Long id, String decisionStatus) {
+        MonthlyReport report = monthlyReportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Monthly report not found"));
+
+        String next = decisionStatus == null ? "" : decisionStatus.trim().toUpperCase();
+        if (!Set.of("APPROVED", "REJECTED").contains(next)) {
+            throw new RuntimeException("Decision must be APPROVED or REJECTED");
+        }
+
+        String current = report.getStatus() != null ? report.getStatus().trim().toUpperCase() : "DRAFT";
+        if (!"SUBMITTED".equals(current)) {
+            throw new RuntimeException("Only SUBMITTED reports can be reviewed");
+        }
+
+        report.setStatus(next);
+        return convertToDTO(monthlyReportRepository.save(report));
+    }
+
+    @Transactional
+    public List<MonthlyReportDTO> getReportsByAreaManagerEmail(String areaManagerEmail) {
+        AreaManager manager = resolveOrCreateAreaManagerByEmail(areaManagerEmail);
+        return getReportsByManager(manager.getId());
     }
 
     public MonthlyReportDTO getReportById(Long id) {
@@ -100,5 +166,31 @@ public class MonthlyReportService {
         dto.setGeneratedDate(report.getGeneratedDate());
         dto.setStatus(report.getStatus());
         return dto;
+    }
+
+    private AreaManager resolveOrCreateAreaManagerByEmail(String areaManagerEmail) {
+        if (areaManagerEmail == null || areaManagerEmail.isBlank()) {
+            throw new RuntimeException("Missing X-User-Email");
+        }
+
+        String email = areaManagerEmail.trim();
+
+        return areaManagerRepository.findByEmail(email)
+                .orElseGet(() -> {
+                    // Fallback to users table when area_managers is not seeded for this login.
+                    User user = userRepository.findByEmail(email)
+                            .orElseThrow(() -> new RuntimeException("Area manager not found in users: " + email));
+
+                    AreaManager created = new AreaManager();
+                    created.setEmail(user.getEmail());
+                    created.setPassword(user.getPassword());
+                    created.setBranch(user.getBranch());
+                    created.setFullName(user.getFullName() != null ? user.getFullName() : user.getEmail());
+                    created.setEmployeeId(user.getUsername() != null ? user.getUsername() : String.valueOf(user.getId()));
+                    created.setContactNumber(user.getMobileNumber() != null ? user.getMobileNumber() : "0000000000");
+                    created.setDesignation(user.getDesignation() != null ? user.getDesignation() : "Area Manager");
+                    created.setStatus("ACTIVE");
+                    return areaManagerRepository.save(created);
+                });
     }
 }

@@ -23,5 +23,8 @@ public interface MonthlyReportRepository extends JpaRepository<MonthlyReport, Lo
             "ORDER BY m.year DESC, m.month DESC")
     List<MonthlyReport> findByManagerOrderByDate(@Param("managerId") Long managerId);
 
+    @Query("SELECT m FROM MonthlyReport m ORDER BY m.year DESC, m.month DESC, m.generatedDate DESC, m.id DESC")
+    List<MonthlyReport> findAllOrderByPeriodAndDateDesc();
+
     List<MonthlyReport> findByStatus(String status);
 }
