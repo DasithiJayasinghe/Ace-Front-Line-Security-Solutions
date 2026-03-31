@@ -103,6 +103,11 @@
   letter-spacing: 0.02em;
 }
 
+/* Dark edit modal: override base label color (higher specificity). */
+.attendance-page .attendance-edit-modal .form-group label {
+  color: #FFFFFF;
+}
+
 .attendance-page .form-group input,
 .attendance-page .form-group select,
 .attendance-page .form-group textarea {
@@ -327,6 +332,66 @@
   background: rgba(59, 130, 246, 0.2);
   color: #1d4ed8;
   border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.attendance-page .attendance-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: #FFFFFF;
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.attendance-page .attendance-action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.attendance-page .attendance-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14), inset 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.attendance-page .attendance-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.attendance-page .attendance-action-btn--edit {
+  border-color: rgba(244, 204, 0, 0.9);
+  background: rgba(244, 204, 0, 0.16);
+}
+
+.attendance-page .attendance-action-btn--edit:hover:not(:disabled) {
+  background: #F4CC00;
+  border-color: #000000;
+  color: #000000;
+}
+
+.attendance-page .attendance-action-btn--delete {
+  margin-left: 10px;
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.10);
+  color: #b91c1c;
+}
+
+.attendance-page .attendance-action-btn--delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.95);
+  border-color: rgba(0, 0, 0, 0.55);
+  color: #FFFFFF;
 }
 
 .attendance-page .histogram-container {

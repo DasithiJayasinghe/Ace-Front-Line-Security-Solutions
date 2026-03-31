@@ -12,13 +12,16 @@ interface SecurityOfficer {
 interface AttendanceRecord {
   id?: number;
   attendanceDate: string;
+  securityOfficerId?: number;
   securityOfficerName: string;
   securityId: string;
   checkInTime: string | null;
   checkOutTime: string | null;
-  hoursWorked: number;
-  overtimeHours: number;
-  status: string;
+  hoursWorked?: number;
+  overtimeHours?: number;
+  status?: string;
+  remarks?: string;
+  isShiftCounted?: boolean;
 }
 
 export default function Attendance() {
@@ -43,6 +46,20 @@ export default function Attendance() {
     date: "",
     officerName: "",
     securityId: "",
+  });
+
+  // Edit/Delete modal for existing attendance rows
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({
+    securityOfficerId: "",
+    attendanceDate: todayStr,
+    checkInTime: "",
+    checkOutTime: "",
+    status: "PRESENT",
+    remarks: "",
+    isShiftCounted: "true",
+    overtimeHours: "",
   });
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
@@ -135,7 +152,13 @@ export default function Attendance() {
   // Automatically set "Count as Shift" to "No" when calculated working hours < 12
   useEffect(() => {
     const { checkInTime: inVal, checkOutTime: outVal } = form;
-    if (!inVal || !outVal) return;
+    if (!inVal || !outVal) {
+      // Avoid stale OT value when user clears check-in/out.
+      if (form.overtimeHours !== "") {
+        setForm((f) => ({ ...f, overtimeHours: "" }));
+      }
+      return;
+    }
     const inParts = inVal.split(":");
     const outParts = outVal.split(":");
     if (inParts.length !== 2 || outParts.length !== 2) return;
@@ -144,10 +167,48 @@ export default function Attendance() {
     let diff = outMinutes - inMinutes;
     if (diff < 0) diff += 24 * 60;
     const hours = diff / 60;
-    if (hours < 12) {
-      setForm((f) => (f.isShiftCounted === "false" ? f : { ...f, isShiftCounted: "false" }));
-    }
+    const shiftCounted = hours >= 12;
+    const overtime = Math.max(0, hours - 12);
+
+    setForm((f) => ({
+      ...f,
+      isShiftCounted: shiftCounted ? "true" : "false",
+      // Keep backend as source of truth, but pre-fill OT to match the same rule.
+      overtimeHours: overtime > 0 ? overtime.toFixed(2) : "0",
+    }));
   }, [form.checkInTime, form.checkOutTime]);
+
+  // Auto-calculate for edit modal (12-hour shift rule)
+  useEffect(() => {
+    const { checkInTime: inVal, checkOutTime: outVal } = editForm;
+
+    if (!inVal || !outVal) {
+      if (editForm.overtimeHours !== "") {
+        setEditForm((f) => ({ ...f, overtimeHours: "" }));
+      }
+      return;
+    }
+
+    const inParts = inVal.split(":");
+    const outParts = outVal.split(":");
+    if (inParts.length !== 2 || outParts.length !== 2) return;
+
+    const inMinutes = parseInt(inParts[0], 10) * 60 + parseInt(inParts[1], 10);
+    const outMinutes = parseInt(outParts[0], 10) * 60 + parseInt(outParts[1], 10);
+
+    let diff = outMinutes - inMinutes;
+    if (diff < 0) diff += 24 * 60;
+
+    const hours = diff / 60;
+    const shiftCounted = hours >= 12;
+    const overtime = Math.max(0, hours - 12);
+
+    setEditForm((f) => ({
+      ...f,
+      isShiftCounted: shiftCounted ? "true" : "false",
+      overtimeHours: overtime > 0 ? overtime.toFixed(2) : "0",
+    }));
+  }, [editForm.checkInTime, editForm.checkOutTime]);
 
   async function loadOfficers() {
     const date = form.attendanceDate;
@@ -391,6 +452,90 @@ export default function Attendance() {
     }
   }
 
+  function normalizeTime(t: string | null | undefined) {
+    if (!t) return "";
+    // DB might return "HH:mm:ss" while input needs "HH:mm"
+    return String(t).slice(0, 5);
+  }
+
+  function openEditModal(record: AttendanceRecord) {
+    if (!record.id) return;
+
+    const attendanceDate = record.attendanceDate
+      ? String(record.attendanceDate).slice(0, 10)
+      : form.attendanceDate;
+
+    setEditId(record.id);
+    setEditModalOpen(true);
+    setEditForm({
+      securityOfficerId: record.securityOfficerId != null ? String(record.securityOfficerId) : "",
+      attendanceDate,
+      checkInTime: normalizeTime(record.checkInTime),
+      checkOutTime: normalizeTime(record.checkOutTime),
+      status: record.status ?? "PRESENT",
+      remarks: record.remarks ?? "",
+      isShiftCounted: record.isShiftCounted != null ? (record.isShiftCounted ? "true" : "false") : "true",
+      overtimeHours:
+        record.overtimeHours != null ? Number(record.overtimeHours).toFixed(2) : "",
+    });
+  }
+
+  async function handleUpdateEdit() {
+    if (!editId) return;
+
+    const effectiveIso = tableFilters.date ? tableFilters.date : form.attendanceDate;
+    const payload = {
+      // updateAttendance ignores securityOfficerId (it loads by attendance id)
+      securityOfficerId: editForm.securityOfficerId ? parseInt(editForm.securityOfficerId, 10) : null,
+      attendanceDate: editForm.attendanceDate,
+      checkInTime: editForm.checkInTime || null,
+      checkOutTime: editForm.checkOutTime || null,
+      status: editForm.status,
+      remarks: editForm.remarks,
+      isShiftCounted: editForm.isShiftCounted === "true",
+      overtimeHours: editForm.overtimeHours !== "" ? parseFloat(editForm.overtimeHours) : null,
+    };
+
+    try {
+      const res = await fetch(`/api/attendance/${editId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        alert("Update failed: " + (await res.text()));
+        return;
+      }
+
+      alert("Attendance updated successfully!");
+      setEditModalOpen(false);
+      setEditId(null);
+      loadAttendance(effectiveIso);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update attendance.");
+    }
+  }
+
+  async function handleDeleteAttendance(id?: number) {
+    if (!id) return;
+    if (!confirm("Delete this attendance record?")) return;
+
+    const effectiveIso = tableFilters.date ? tableFilters.date : form.attendanceDate;
+    try {
+      const res = await fetch(`/api/attendance/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        alert("Delete failed: " + (await res.text()));
+        return;
+      }
+      alert("Attendance deleted successfully!");
+      loadAttendance(effectiveIso);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete attendance.");
+    }
+  }
+
   function statusClass(s: string) {
     return "status-" + s.toLowerCase();
   }
@@ -573,18 +718,19 @@ export default function Attendance() {
               <th>Hours</th>
               <th>OT Hours</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {recordsLoading ? (
               <tr>
-                <td colSpan={8} className="empty-state">
+                <td colSpan={9} className="empty-state">
                   Loading records...
                 </td>
               </tr>
             ) : recentRecords.length === 0 ? (
               <tr>
-                <td colSpan={8} className="empty-state">
+                <td colSpan={9} className="empty-state">
                   {hasActiveFilters
                     ? "No records match your filters"
                     : "No attendance records for this month"}
@@ -607,12 +753,143 @@ export default function Attendance() {
                   <td>
                     <span className={`status-badge ${statusClass(record.status)}`}>{record.status}</span>
                   </td>
+                  <td className="whitespace-nowrap">
+                    <button
+                      type="button"
+                      className="attendance-action-btn attendance-action-btn--edit"
+                      onClick={() => openEditModal(record)}
+                      disabled={!record.id}
+                      title="Edit attendance"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="attendance-action-btn attendance-action-btn--delete"
+                      onClick={() => handleDeleteAttendance(record.id)}
+                      disabled={!record.id}
+                      title="Delete attendance"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {editModalOpen && editId != null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            className="attendance-edit-modal bg-[#1A1A1A] p-6 rounded-lg w-full max-w-md border border-[#D4AF37]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-4 text-[#D4AF37]">Edit Attendance</h3>
+
+            <div className="space-y-4">
+              <div className="form-group">
+                <label className="block text-white text-sm mb-1">Attendance Date</label>
+                <input
+                  type="text"
+                  readOnly
+                  value={editForm.attendanceDate}
+                  className="w-full bg-[#0D0D0D] border border-gray-700 rounded p-2 text-white"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="block text-white text-sm mb-1">Check-In Time</label>
+                <input
+                  type="time"
+                  value={editForm.checkInTime}
+                  onChange={(e) => setEditForm((f) => ({ ...f, checkInTime: e.target.value }))}
+                  className="w-full bg-[#0D0D0D] border border-gray-700 rounded p-2 text-white"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="block text-white text-sm mb-1">Check-Out Time</label>
+                <input
+                  type="time"
+                  value={editForm.checkOutTime}
+                  onChange={(e) => setEditForm((f) => ({ ...f, checkOutTime: e.target.value }))}
+                  className="w-full bg-[#0D0D0D] border border-gray-700 rounded p-2 text-white"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="block text-white text-sm mb-1">OT Hours</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.25}
+                  value={editForm.overtimeHours}
+                  onChange={(e) => setEditForm((f) => ({ ...f, overtimeHours: e.target.value }))}
+                  className="w-full bg-[#0D0D0D] border border-gray-700 rounded p-2 text-white"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="block text-white text-sm mb-1">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                  className="w-full bg-[#0D0D0D] border border-gray-700 rounded p-2 text-white"
+                >
+                  <option value="PRESENT">Present</option>
+                  <option value="ABSENT">Absent</option>
+                  <option value="HALF_DAY">Half Day</option>
+                  <option value="LEAVE">Leave</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="block text-white text-sm mb-1">Count as Shift</label>
+                <select
+                  value={editForm.isShiftCounted}
+                  onChange={(e) => setEditForm((f) => ({ ...f, isShiftCounted: e.target.value }))}
+                  className="w-full bg-[#0D0D0D] border border-gray-700 rounded p-2 text-white"
+                >
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="block text-white text-sm mb-1">Remarks</label>
+                <textarea
+                  value={editForm.remarks}
+                  onChange={(e) => setEditForm((f) => ({ ...f, remarks: e.target.value }))}
+                  className="w-full bg-[#0D0D0D] border border-gray-700 rounded p-2 text-white h-24"
+                  placeholder="Any additional notes..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                className="px-4 py-2 rounded border border-gray-600 text-white hover:bg-gray-800"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditId(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 rounded bg-[#D4AF37] text-black font-bold hover:bg-yellow-600"
+                onClick={handleUpdateEdit}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="histogram-container">
         <h3>Monthly Attendance Overview</h3>

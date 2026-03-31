@@ -40,7 +40,8 @@ public class AttendanceService {
     private WeeklyReportService weeklyReportService;
 
     private static final int MAX_SHIFTS_PER_MONTH = 60;
-    private static final double STANDARD_SHIFT_HOURS = 8.0;
+    // A shift lasts 12 hours. Overtime is calculated as: max(0, hoursWorked - 12).
+    private static final double STANDARD_SHIFT_HOURS = 12.0;
     private static final double MAX_OT_HOURS_PER_MONTH = 180.0;
 
     @Transactional
@@ -163,12 +164,16 @@ public class AttendanceService {
      */
     private void updateWeeklyReportForAttendance(Attendance attendance, Long managerId) {
         try {
-            weeklyReportService.generateWeeklyReport(
+            // Preserve existing weekly report rows (including their companyName) and only
+            // update OT/hours totals based on attendance for that week.
+            weeklyReportService.refreshWeeklyReportTotalsFromAttendance(
                     attendance.getSecurityOfficer().getId(),
                     managerId,
                     attendance.getAttendanceDate());
-        } catch (Exception ignored) {
-            // Do not fail attendance persistence if weekly report refresh cannot run
+        } catch (Exception e) {
+            // Helpful while debugging: attendance should not fail, but we need to see why weekly report refresh didn't run.
+            System.err.println("Failed to refresh weekly reports after attendance update: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -185,10 +190,8 @@ public class AttendanceService {
                 attendance.setOvertimeHours(0.0);
             }
 
-            // Business rule: if working hours < 12, do NOT count this as a shift
-            if (hours < 12.0) {
-                attendance.setIsShiftCounted(false);
-            }
+            // Business rule: count shift only when worked >= 12 hours.
+            attendance.setIsShiftCounted(hours >= STANDARD_SHIFT_HOURS);
         } else {
             attendance.setHoursWorked(0.0);
             attendance.setOvertimeHours(0.0);
@@ -247,7 +250,10 @@ public class AttendanceService {
         attendanceRepository.deleteById(id);
         if (managerId != null) {
             try {
-                weeklyReportService.generateWeeklyReport(officerId, managerId, attendanceDate);
+                // Keep weekly report rows (including companyName) stable; only OT/hours totals
+                // should reflect attendance rows for the week.
+                weeklyReportService.refreshWeeklyReportTotalsFromAttendance(
+                        officerId, managerId, attendanceDate);
             } catch (Exception ignored) { }
         }
     }
