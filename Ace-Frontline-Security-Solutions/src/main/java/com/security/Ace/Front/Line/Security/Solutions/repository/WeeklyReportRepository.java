@@ -14,6 +14,9 @@ public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long
 
     List<WeeklyReport> findByAreaManagerId(Long areaManagerId);
 
+    /** Newest generated rows first (for UI + API consumption). */
+    List<WeeklyReport> findByAreaManagerIdOrderByGeneratedDateDescWeekStartDateDescIdDesc(Long areaManagerId);
+
     List<WeeklyReport> findBySecurityOfficerId(Long securityOfficerId);
 
     List<WeeklyReport> findByYearAndWeekNumber(Integer year, Integer weekNumber);
@@ -24,6 +27,13 @@ public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long
     Optional<WeeklyReport> findBySecurityOfficerIdAndYearAndMonthAndWeekNumber(
             Long securityOfficerId, Integer year, Integer month, Integer weekNumber);
 
+    List<WeeklyReport> findByAreaManagerIdAndSecurityOfficerIdAndYearAndMonthAndWeekNumber(
+            Long areaManagerId,
+            Long securityOfficerId,
+            Integer year,
+            Integer month,
+            Integer weekNumber);
+
     Optional<WeeklyReport> findBySecurityOfficerIdAndYearAndMonthAndWeekNumberAndClientCompanyName(
             Long securityOfficerId,
             Integer year,
@@ -32,8 +42,11 @@ public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long
             String clientCompanyName);
 
     @Query("SELECT w FROM WeeklyReport w WHERE w.areaManager.id = :managerId " +
-            "AND w.year = :year ORDER BY w.month, w.weekNumber")
+            "AND w.year = :year ORDER BY w.generatedDate DESC, w.weekStartDate DESC, w.id DESC")
     List<WeeklyReport> findByManagerAndYear(
             @Param("managerId") Long managerId,
             @Param("year") Integer year);
+
+    /** All rows, newest first — for operational manager oversight. */
+    List<WeeklyReport> findAllByOrderByGeneratedDateDescWeekStartDateDescIdDesc();
 }

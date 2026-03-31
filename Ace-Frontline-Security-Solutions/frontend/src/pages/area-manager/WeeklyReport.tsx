@@ -3,8 +3,6 @@ import { Chart } from "chart.js/auto";
 import "./WeeklyReport.css";
 import { hslVar } from "@/lib/utils";
 
-const MANAGER_ID = 1;
-
 interface WeeklyReportRecord {
   id: number;
   securityOfficerName: string;
@@ -13,6 +11,9 @@ interface WeeklyReportRecord {
   weekNumber: number;
   month: number | null;
   year: number;
+  weekStartDate?: string | null;
+  weekEndDate?: string | null;
+  branch?: string | null;
   totalShifts: number;
   totalOvertimeHours: number;
   totalHoursWorked: number;
@@ -80,6 +81,10 @@ export default function WeeklyReport() {
   const [crudWeekDate, setCrudWeekDate] = useState("");
   const [manageModalOpen, setManageModalOpen] = useState(false);
   const [manageGroup, setManageGroup] = useState<WeeklyReportRecord[]>([]);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewReportItem, setViewReportItem] = useState<WeeklyReportRecord | null>(null);
+  const [weekManageOpen, setWeekManageOpen] = useState(false);
+  const [weekManageItems, setWeekManageItems] = useState<WeeklyReportRecord[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editReport, setEditReport] = useState<WeeklyReportRecord | null>(null);
   const [editForm, setEditForm] = useState({
@@ -122,11 +127,9 @@ export default function WeeklyReport() {
 
   async function loadOfficersForCompany(companyName: string) {
     try {
-      const res = await fetch(
-        `/api/security-officers/manager/${MANAGER_ID}/by-company?companyName=${encodeURIComponent(companyName)}`
-      );
-      const data = await res.json();
-      setOfficers(Array.isArray(data) ? data : []);
+      // Officer filter options should come from weekly reports for the selected week.
+      // This function is kept for compatibility but no longer calls the old manager-scoped endpoint.
+      setOfficers([]);
     } catch (e) {
       console.error("Error loading officers:", e);
       setOfficers([]);
@@ -135,7 +138,10 @@ export default function WeeklyReport() {
 
   async function loadReports() {
     try {
-      const res = await fetch(`/api/weekly-reports/manager/${MANAGER_ID}`);
+      const email = localStorage.getItem("loggedInEmail")?.trim();
+      const res = await fetch(`/api/weekly-reports/me`, {
+        headers: email ? { "X-User-Email": email } : {},
+      });
       const data = await res.json();
       setAllReports(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -160,7 +166,13 @@ export default function WeeklyReport() {
           `/api/weekly-reports/generate/company?companyName=${encodeURIComponent(
             filterCompany
           )}&weekDate=${encodeURIComponent(filterWeekDate)}`,
-          { method: "POST" }
+          {
+            method: "POST",
+            headers: (() => {
+              const email = localStorage.getItem("loggedInEmail")?.trim();
+              return email ? { "X-User-Email": email } : {};
+            })(),
+          }
         );
         await loadReports();
       } catch (e) {
@@ -187,14 +199,21 @@ export default function WeeklyReport() {
             `/api/weekly-reports/generate/company?companyName=${encodeURIComponent(
               crudCompany
             )}&weekDate=${encodeURIComponent(crudWeekDate)}`,
-            { method: "POST" }
+            {
+              method: "POST",
+              headers: (() => {
+                const email = localStorage.getItem("loggedInEmail")?.trim();
+                return email ? { "X-User-Email": email } : {};
+              })(),
+            }
           );
         }
       }
 
-      let url = `/api/weekly-reports/manager/${MANAGER_ID}/company?companyName=${encodeURIComponent(crudCompany)}`;
+      let url = `/api/weekly-reports/me/company?companyName=${encodeURIComponent(crudCompany)}`;
       if (crudWeekDate) url += "&weekDate=" + encodeURIComponent(crudWeekDate);
-      const res = await fetch(url);
+      const email = localStorage.getItem("loggedInEmail")?.trim();
+      const res = await fetch(url, { headers: email ? { "X-User-Email": email } : {} });
       const data = await res.json();
       setCrudReports(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -336,15 +355,45 @@ export default function WeeklyReport() {
   useEffect(() => {
     loadCompanies();
     loadReports();
+    // Weekly reports should reflect latest attendance edits without requiring
+    // manual refresh/reload of the page.
+    const interval = window.setInterval(() => {
+      loadReports();
+    }, 15000);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (filterCompany) loadOfficersForCompany(filterCompany);
-    else setOfficers([]);
-  }, [filterCompany]);
+    // Officer dropdown is derived from the already-loaded weekly report rows for the selected week.
+    if (!filterCompany || !filterWeekDate) {
+      setOfficers([]);
+      return;
+    }
+    const wk = getWeekAndYearFromDate(filterWeekDate);
+    if (!wk) {
+      setOfficers([]);
+      return;
+    }
+    const list = (Array.isArray(allReports) ? allReports : [])
+      .filter(
+        (r) =>
+          r.companyName === filterCompany &&
+          r.year === wk.year &&
+          r.month === wk.month &&
+          r.weekNumber === wk.weekNumber
+      )
+      .map((r) => ({ id: -1, fullName: r.securityOfficerName, securityId: r.securityId }))
+      .filter((o) => o.securityId);
+    const unique = new Map<string, SecurityOfficer>();
+    list.forEach((o) => {
+      if (!unique.has(o.securityId)) unique.set(o.securityId, o);
+    });
+    setOfficers(Array.from(unique.values()).sort((a, b) => a.fullName.localeCompare(b.fullName)));
+  }, [filterCompany, filterWeekDate, allReports]);
 
-  function viewReport(id: number) {
-    alert("Report details view - Coming soon!\nReport ID: " + id);
+  function viewReport(report: WeeklyReportRecord) {
+    setViewReportItem(report);
+    setViewModalOpen(true);
   }
 
   function openManageModal(idsStr: string) {
@@ -370,29 +419,12 @@ export default function WeeklyReport() {
 
   async function saveEdit() {
     if (!editReport) return;
-    let totalShifts = editForm.totalShifts;
-    let totalOvertimeHours = editForm.totalOvertimeHours;
-    if (totalShifts > 14) {
-      alert(
-        "A security officer can have a maximum of 14 shifts per week (2 per day). The value will be capped at 14."
-      );
-      totalShifts = 14;
-      setEditForm((f) => ({ ...f, totalShifts: 14 }));
-    }
-    if (totalOvertimeHours > 42) {
-      alert("Maximum overtime allowed is 42 hours per week. The value will be capped at 42.");
-      totalOvertimeHours = 42;
-      setEditForm((f) => ({ ...f, totalOvertimeHours: 42 }));
-    }
     try {
       const res = await fetch("/api/weekly-reports/" + editReport.id, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: editReport.id,
-          totalShifts,
-          totalOvertimeHours,
-          totalHoursWorked: editForm.totalHoursWorked,
           remarks: editForm.remarks,
         }),
       });
@@ -419,12 +451,38 @@ export default function WeeklyReport() {
         return;
       }
       setManageModalOpen(false);
+      setWeekManageOpen(false);
       loadCrudReports();
       loadReports();
     } catch (e) {
       console.error(e);
       alert("Failed to delete report.");
     }
+  }
+
+  async function deleteWeekGroup(items: WeeklyReportRecord[]) {
+    if (!items || items.length === 0) return;
+    const weekLabel = weekDisplayLabel(items[0]);
+    if (!confirm(`Delete ALL weekly report rows for ${weekLabel}?`)) return;
+
+    // Delete sequentially so we can show the first failure clearly.
+    for (const r of items) {
+      try {
+        const res = await fetch("/api/weekly-reports/" + r.id, { method: "DELETE" });
+        if (!res.ok) {
+          alert("Delete failed for report #" + r.id + ": " + (await res.text()));
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to delete report #" + r.id);
+        return;
+      }
+    }
+
+    setWeekManageOpen(false);
+    loadCrudReports();
+    loadReports();
   }
 
   function handleCrudGenerateClick() {
@@ -501,6 +559,12 @@ export default function WeeklyReport() {
     return rows;
   })();
 
+  const canManageSelectedWeek =
+    !!filterCompany &&
+    !!filterWeekDate &&
+    Array.isArray(filteredReports) &&
+    filteredReports.length > 0;
+
   return (
     <div className="area-weekly">
       <div className="header">
@@ -512,8 +576,7 @@ export default function WeeklyReport() {
         <div className="form-section">
           <h3>Generate Weekly Report</h3>
           <p className="section-desc">
-            Select a company to see security officers and their weekly report details. You can generate, edit, or delete
-            report rows.
+            Generate weekly report rows for a company and week. Edits/deletes are available in Recent Weekly Reports after generation.
           </p>
           <div className="form-grid">
             <div className="form-group">
@@ -534,7 +597,13 @@ export default function WeeklyReport() {
                   ref={crudWeekDateInputRef}
                   type="date"
                   value={crudWeekDate}
-                  onChange={(e) => setCrudWeekDate(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setCrudWeekDate(next);
+                    // Changing week should reset company selection to avoid showing stale rows.
+                    setCrudCompany("");
+                    setCrudReports([]);
+                  }}
                 />
                 <button
                   type="button"
@@ -580,32 +649,17 @@ export default function WeeklyReport() {
                       <td>{row.totalHours.toFixed(2)}</td>
                       <td>{row.remarks}</td>
                       <td>
-                        {row.group.length === 1 ? (
-                          <>
-                            <button
-                              type="button"
-                              className="btn-view"
-                              onClick={() => openEditModal(row.group[0])}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => deleteReport(row.group[0].id)}
-                            >
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn-view"
-                            onClick={() => openManageModal(row.group.map((r) => r.id).join(","))}
-                          >
-                            Manage
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="btn-view"
+                          onClick={() =>
+                            row.group.length === 1
+                              ? viewReport(row.group[0])
+                              : openManageModal(row.group.map((r) => r.id).join(","))
+                          }
+                        >
+                          {row.group.length === 1 ? "View" : "View Weeks"}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -655,7 +709,12 @@ export default function WeeklyReport() {
                   ref={filterWeekDateInputRef}
                   type="date"
                   value={filterWeekDate}
-                  onChange={(e) => setFilterWeekDate(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setFilterWeekDate(next);
+                    // Changing week should reset officer filter only (keep company).
+                    setFilterOfficerId("");
+                  }}
                 />
                 <button
                   type="button"
@@ -706,16 +765,9 @@ export default function WeeklyReport() {
                       <button
                         type="button"
                         className="btn-view"
-                        onClick={() => openEditModal(r)}
+                        onClick={() => viewReport(r)}
                       >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => deleteReport(r.id)}
-                      >
-                        Delete
+                        View
                       </button>
                     </td>
                   </tr>
@@ -739,41 +791,35 @@ export default function WeeklyReport() {
           <div className="modal-content modal-edit" onClick={(e) => e.stopPropagation()}>
             <h3>Edit Weekly Report</h3>
             <div className="form-group">
-              <label>Total Shifts (max 14 per week)</label>
+              <label>Total Shifts (from shift scheduling)</label>
               <input
                 type="number"
                 min={0}
                 max={14}
                 step={1}
                 value={editForm.totalShifts}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, totalShifts: parseInt(e.target.value, 10) || 0 }))
-                }
+                readOnly
               />
             </div>
             <div className="form-group">
-              <label>OT Hours (max 42 per week)</label>
+              <label>OT Hours (from attendance)</label>
               <input
                 type="number"
                 min={0}
                 max={42}
                 step={0.25}
                 value={editForm.totalOvertimeHours}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, totalOvertimeHours: parseFloat(e.target.value) || 0 }))
-                }
+                readOnly
               />
             </div>
             <div className="form-group">
-              <label>Total Hours Worked</label>
+              <label>Total Hours Worked (from attendance)</label>
               <input
                 type="number"
                 min={0}
                 step={0.25}
                 value={editForm.totalHoursWorked}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, totalHoursWorked: parseFloat(e.target.value) || 0 }))
-                }
+                readOnly
               />
             </div>
             <div className="form-group">
@@ -799,8 +845,85 @@ export default function WeeklyReport() {
         </div>
       )}
 
+      {viewModalOpen && viewReportItem && (
+        <div className="modal-overlay" onClick={() => setViewModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Weekly report details</h3>
+            <div style={{ marginTop: 10, lineHeight: 1.7 }}>
+              <div>
+                <strong>Week:</strong> {weekDisplayLabel(viewReportItem)}
+                {viewReportItem.weekStartDate && viewReportItem.weekEndDate
+                  ? ` (${String(viewReportItem.weekStartDate).slice(0, 10)} → ${String(
+                      viewReportItem.weekEndDate
+                    ).slice(0, 10)})`
+                  : ""}
+              </div>
+              <div>
+                <strong>Officer:</strong> {viewReportItem.securityOfficerName} ({viewReportItem.securityId})
+              </div>
+              <div>
+                <strong>Company:</strong> {viewReportItem.companyName}
+              </div>
+              {viewReportItem.branch ? (
+                <div>
+                  <strong>Branch:</strong> {viewReportItem.branch}
+                </div>
+              ) : null}
+              <div>
+                <strong>Shifts (from scheduling):</strong> {viewReportItem.totalShifts ?? 0}
+              </div>
+              <div>
+                <strong>OT Hours (from attendance):</strong>{" "}
+                {(viewReportItem.totalOvertimeHours ?? 0).toFixed(2)}
+              </div>
+              <div>
+                <strong>Total Hours Worked (from attendance):</strong>{" "}
+                {(viewReportItem.totalHoursWorked ?? 0).toFixed(2)}
+              </div>
+              <div>
+                <strong>Remarks:</strong> {viewReportItem.remarks?.trim() ? viewReportItem.remarks : "-"}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 18 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setViewModalOpen(false)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setViewModalOpen(false);
+                  openEditModal(viewReportItem);
+                }}
+              >
+                Edit remarks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="content-wrapper">
         <h3 className="section-title">Recent Weekly Reports</h3>
+        {canManageSelectedWeek ? (
+          <div style={{ margin: "10px 0 14px" }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setWeekManageItems(filteredReports);
+                setWeekManageOpen(true);
+              }}
+            >
+              Manage Week (Edit/Delete as a group)
+            </button>
+          </div>
+        ) : null}
         <div className="company-weekly-summary">
           <p>
             <strong>Company Name:</strong> <span>{summary?.company ?? "-"}</span>
@@ -853,7 +976,7 @@ export default function WeeklyReport() {
                     <button
                       type="button"
                       className="btn-view"
-                      onClick={() => viewReport(report.id)}
+                      onClick={() => viewReport(report)}
                     >
                       View Details
                     </button>
@@ -864,6 +987,63 @@ export default function WeeklyReport() {
           </tbody>
         </table>
       </div>
+
+      {weekManageOpen && weekManageItems.length > 0 && (
+        <div className="modal-overlay" onClick={() => setWeekManageOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>
+              Manage week: {weekDisplayLabel(weekManageItems[0])} · {weekManageItems[0].companyName}
+            </h3>
+            <p style={{ marginTop: 6, color: "#9CA3AF" }}>
+              Shifts come from scheduling, hours/OT from attendance. You can edit remarks per row, or delete the whole week.
+            </p>
+
+            <table className="reports-table" style={{ marginTop: 12 }}>
+              <thead>
+                <tr>
+                  <th>Officer</th>
+                  <th>Security ID</th>
+                  <th>Shifts</th>
+                  <th>OT Hours</th>
+                  <th>Total Hours</th>
+                  <th>Remarks</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weekManageItems.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.securityOfficerName}</td>
+                    <td>{r.securityId}</td>
+                    <td>{r.totalShifts ?? 0}</td>
+                    <td>{(r.totalOvertimeHours ?? 0).toFixed(2)}</td>
+                    <td>{(r.totalHoursWorked ?? 0).toFixed(2)}</td>
+                    <td>{r.remarks ?? "-"}</td>
+                    <td>
+                      <button type="button" className="btn-view" onClick={() => viewReport(r)}>
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 16 }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setWeekManageOpen(false)}>
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => deleteWeekGroup(weekManageItems)}
+              >
+                Delete entire week
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="histogram-container">
         <h3>Weekly Shifts Overview</h3>
