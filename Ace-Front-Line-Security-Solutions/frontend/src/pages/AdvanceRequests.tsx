@@ -18,6 +18,16 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Check, X, CreditCard, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,13 +44,11 @@ interface Advance {
     requestedDate: string;
     reason: string;
     requestedAmount: number;
-    status: "PENDING" | "APPROVED" | "PAID" | "REJECTED";
+    status: "PENDING" | "APPROVED" | "PROCESSING" | "PAID" | "REJECTED";
     advanceMonth?: string;
     paymentDate?: string;
     deducted?: boolean;
 }
-
-// Remove mock data block
 
 interface AdvanceRequestsProps {
     role?: string;
@@ -48,28 +56,52 @@ interface AdvanceRequestsProps {
 
 const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
     const [activeTab, setActiveTab] = useState("pending");
-    const [selectedMonth, setSelectedMonth] = useState("2026-02");
+    const [selectedMonth, setSelectedMonth] = useState("ALL");
 
     const [pendingAdvances, setPendingAdvances] = useState<Advance[]>([]);
     const [paidAdvances, setPaidAdvances] = useState<Advance[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    const isExecutiveOfficer = role === "Executive Officer";
+    const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState("");
+    const [selectedAdvanceId, setSelectedAdvanceId] = useState<number | null>(null);
+
+    const isAreaManager = role === "Area Manager";
     const isAccountant = role === "Accountant";
+    const isOfficer = role === "Security Officer";
+    const currentUserId = localStorage.getItem("userId");
+
+    const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+    const [requestAmount, setRequestAmount] = useState("");
+    const [requestReason, setRequestReason] = useState("");
+    const [requestMonth, setRequestMonth] = useState(new Date().toISOString().slice(0, 7));
 
     const fetchAdvances = async () => {
         setIsLoading(true);
         try {
-            // Fetch based on role visibility
-            if (isExecutiveOfficer) {
+            if (isAreaManager) {
                 const pendingRes = await fetch("http://localhost:8080/api/payroll/advances?status=PENDING");
                 if (pendingRes.ok) setPendingAdvances(await pendingRes.json());
             } else if (isAccountant) {
                 const approvedRes = await fetch("http://localhost:8080/api/payroll/advances?status=APPROVED");
                 if (approvedRes.ok) setPendingAdvances(await approvedRes.json());
 
+                const processingRes = await fetch("http://localhost:8080/api/payroll/advances?status=PROCESSING");
+                const processingData = processingRes.ok ? await processingRes.json() : [];
+
                 const paidRes = await fetch("http://localhost:8080/api/payroll/advances?status=PAID");
-                if (paidRes.ok) setPaidAdvances(await paidRes.json());
+                const paidData = paidRes.ok ? await paidRes.json() : [];
+
+                setPaidAdvances([...processingData, ...paidData]);
+            } else if (isOfficer) {
+                // Fetch all requests for this officer
+                const res = await fetch(`http://localhost:8080/api/payroll/advances`);
+                if (res.ok) {
+                    const all: Advance[] = await res.json();
+                    const mine = all.filter(a => String(a.officer.officerId) === String(currentUserId));
+                    setPendingAdvances(mine.filter(a => a.status !== "PAID" && a.status !== "PROCESSING"));
+                    setPaidAdvances(mine.filter(a => a.status === "PAID" || a.status === "PROCESSING"));
+                }
             }
         } catch (error) {
             console.error("Failed to fetch advances:", error);
@@ -85,7 +117,7 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
 
     const handleApprove = async (id: number) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/payroll/advances/approve/${id}`, { method: 'POST' });
+            const res = await fetch(`http://localhost:8080/api/payroll/advances/approve/${id}?reviewerId=${currentUserId}`, { method: 'POST' });
             if (res.ok) {
                 toast.success(`Advance request #${id} approved successfully!`);
                 fetchAdvances();
@@ -97,11 +129,15 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
         }
     };
 
-    const handleReject = async (id: number) => {
+    const handleReject = async () => {
+        if (!selectedAdvanceId || !rejectionReason) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/payroll/advances/reject/${id}`, { method: 'POST' });
+            const res = await fetch(`http://localhost:8080/api/payroll/advances/reject/${selectedAdvanceId}?reviewerId=${currentUserId}&reason=${encodeURIComponent(rejectionReason)}`, { method: 'POST' });
             if (res.ok) {
-                toast.error(`Advance request #${id} rejected.`);
+                toast.error(`Advance request #${selectedAdvanceId} rejected.`);
+                setRejectDialogOpen(false);
+                setRejectionReason("");
+                setSelectedAdvanceId(null);
                 fetchAdvances();
             } else {
                 toast.error(`Failed to reject: ${await res.text()}`);
@@ -113,9 +149,9 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
 
     const handleMarkPaid = async (id: number) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/payroll/advances/pay/${id}`, { method: 'POST' });
+            const res = await fetch(`http://localhost:8080/api/payroll/advances/pay/${id}?accountantId=${currentUserId}`, { method: 'POST' });
             if (res.ok) {
-                toast.success(`Advance request #${id} marked as paid (10th of the month).`);
+                toast.success(`Advance request #${id} marked as paid.`);
                 fetchAdvances();
             } else {
                 toast.error(`Failed to mark paid: ${await res.text()}`);
@@ -125,8 +161,38 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
         }
     };
 
+    const handleSubmitRequest = async () => {
+        if (!requestAmount || !requestReason || !requestMonth) {
+            toast.error("Please fill in all fields.");
+            return;
+        }
+        try {
+            const res = await fetch("http://localhost:8080/api/payroll/advances/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: currentUserId,
+                    amount: parseFloat(requestAmount),
+                    reason: requestReason,
+                    forMonth: requestMonth
+                })
+            });
+            if (res.ok) {
+                toast.success("Advance request submitted successfully!");
+                setRequestDialogOpen(false);
+                setRequestAmount("");
+                setRequestReason("");
+                fetchAdvances();
+            } else {
+                toast.error(`Failed to submit: ${await res.text()}`);
+            }
+        } catch {
+            toast.error("Network error.");
+        }
+    };
+
     const filteredPaidAdvances = paidAdvances.filter(
-        (adv) => adv.advanceMonth === selectedMonth
+        (adv) => !selectedMonth || selectedMonth === "ALL" || (adv.advanceMonth && adv.advanceMonth.includes(selectedMonth))
     );
 
     return (
@@ -143,18 +209,28 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                             Advance Requests
                         </h1>
                         <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                            {isExecutiveOfficer
+                            {isAreaManager
                                 ? "Review and approve officer salary advance requests."
-                                : "Manage and track officer salary advance payments."}
+                                : isAccountant
+                                    ? "Manage and track officer salary advance payments."
+                                    : "Submit and track your salary advance requests."}
                         </p>
                     </div>
                 </div>
+                {isOfficer && (
+                    <Button
+                        className="bg-neutral-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-primary hover:text-black transition-all"
+                        onClick={() => setRequestDialogOpen(true)}
+                    >
+                        Request Advance
+                    </Button>
+                )}
             </div>
 
             <Tabs defaultValue="pending" className="w-full" onValueChange={setActiveTab}>
-                {!isExecutiveOfficer && (
+                {!isAreaManager && (
                     <TabsList className="grid w-full max-w-[400px] grid-cols-2">
-                        <TabsTrigger value="pending">Pending Payments</TabsTrigger>
+                        <TabsTrigger value="pending">{isOfficer ? "My Requests" : "Pending Payments"}</TabsTrigger>
                         <TabsTrigger value="paid">Paid Advances</TabsTrigger>
                     </TabsList>
                 )}
@@ -163,12 +239,14 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                     <Card className="border-primary/20 bg-card/50 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle>
-                                {isExecutiveOfficer ? "Awaiting Approval" : "Awaiting Payment"}
+                                {isAreaManager ? "Awaiting Approval" : isOfficer ? "Track My Requests" : "Awaiting Payment"}
                             </CardTitle>
                             <CardDescription>
-                                {isExecutiveOfficer
+                                {isAreaManager
                                     ? "Requests submitted by officers that require your review."
-                                    : "Approved requests waiting for payout on the 10th of the month."}
+                                    : isOfficer
+                                        ? "Your submitted advance requests and their current status."
+                                        : "Approved requests waiting for payout."}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -210,12 +288,15 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        {isExecutiveOfficer && adv.status === "PENDING" && (
+                                                        {isAreaManager && adv.status === "PENDING" && (
                                                             <>
                                                                 <Button size="sm" variant="outline" className="h-8 border-green-600 text-green-600 hover:bg-green-600 hover:text-white" onClick={() => handleApprove(adv.id)}>
                                                                     <Check className="h-4 w-4 mr-1" /> Approve
                                                                 </Button>
-                                                                <Button size="sm" variant="outline" className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => handleReject(adv.id)}>
+                                                                <Button size="sm" variant="outline" className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => {
+                                                                    setSelectedAdvanceId(adv.id);
+                                                                    setRejectDialogOpen(true);
+                                                                }}>
                                                                     <X className="h-4 w-4 mr-1" /> Reject
                                                                 </Button>
                                                             </>
@@ -237,7 +318,7 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center text-muted-foreground italic">
-                                                No {isExecutiveOfficer ? "pending" : "approved"} requests found.
+                                                No {isAreaManager ? "pending" : "approved"} requests found.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -247,7 +328,7 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                     </Card>
                 </TabsContent>
 
-                {!isExecutiveOfficer && (
+                {!isAreaManager && (
                     <TabsContent value="paid" className="mt-6">
                         <div className="flex flex-col gap-6">
                             <div className="flex items-center justify-between">
@@ -262,10 +343,22 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                                             <SelectValue placeholder="Select Month" />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="ALL">All Months</SelectItem>
+                                            <SelectItem value="2026-03">March 2026</SelectItem>
                                             <SelectItem value="2026-02">February 2026</SelectItem>
                                             <SelectItem value="2026-01">January 2026</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                    {isAccountant && (
+                                        <Button
+                                            variant="outline"
+                                            disabled={selectedMonth === "ALL"}
+                                            onClick={() => window.open(`http://localhost:8080/api/payroll/advances/export?month=${selectedMonth}`, '_blank')}
+                                            className="ml-2 font-bold uppercase text-[10px] tracking-widest text-[#52677D] border-[#52677D] hover:bg-[#52677D] hover:text-white"
+                                        >
+                                            Export CSV
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
 
@@ -279,6 +372,7 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                                                 <TableHead>Month</TableHead>
                                                 <TableHead>Paid Date</TableHead>
                                                 <TableHead>Amount</TableHead>
+                                                <TableHead>Status</TableHead>
                                                 <TableHead>Deduction Status</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -291,6 +385,17 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                                                         <TableCell>{adv.advanceMonth}</TableCell>
                                                         <TableCell>{adv.paymentDate}</TableCell>
                                                         <TableCell className="font-bold">LKR {adv.requestedAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={cn(
+                                                                    "border-none font-bold text-[9px] uppercase tracking-tighter px-2.5 py-0.5 shadow-none",
+                                                                    adv.status === "PROCESSING" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700 hover:bg-green-200"
+                                                                )}
+                                                            >
+                                                                {adv.status}
+                                                            </Badge>
+                                                        </TableCell>
                                                         <TableCell>
                                                             <Badge
                                                                 variant="outline"
@@ -332,6 +437,83 @@ const AdvanceRequests = ({ role }: AdvanceRequestsProps) => {
                     </TabsContent>
                 )}
             </Tabs>
+
+            <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Reject Advance Request</DialogTitle>
+                        <DialogDescription>
+                            Please provide a reason for rejecting this advance request.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="reason">Rejection Reason</Label>
+                            <Input
+                                id="reason"
+                                placeholder="..."
+                                value={rejectionReason}
+                                onChange={(e) => setRejectionReason(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleReject}>Reject Request</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="uppercase font-black text-xl">New Advance Request</DialogTitle>
+                        <DialogDescription>
+                            Submit a new salary advance request. Max 10% of basic salary.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-6 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="amount" className="font-bold">Amount (LKR)</Label>
+                            <Input
+                                id="amount"
+                                type="number"
+                                placeholder="5000.00"
+                                value={requestAmount}
+                                onChange={(e) => setRequestAmount(e.target.value)}
+                                className="font-bold"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="req-month" className="font-bold">For Month</Label>
+                            <Input
+                                id="req-month"
+                                type="month"
+                                value={requestMonth}
+                                onChange={(e) => setRequestMonth(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="req-reason" className="font-bold">Reason</Label>
+                            <Input
+                                id="req-reason"
+                                placeholder="Brief explanation..."
+                                value={requestReason}
+                                onChange={(e) => setRequestReason(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            className="bg-neutral-900 text-white font-bold uppercase text-[10px] tracking-widest hover:bg-neutral-800"
+                            onClick={handleSubmitRequest}
+                        >
+                            Submit Request
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
