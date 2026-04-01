@@ -16,7 +16,8 @@ import {
     User as UserIcon,
     UserCheck,
     Users,
-    Calculator
+    Calculator,
+    Printer
 } from "lucide-react";
 import {
     Card,
@@ -167,6 +168,10 @@ const SalaryTrends = () => {
         toast.info("Downloading salary trends report...");
     };
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     const MonthPicker = ({
         date,
         setDate,
@@ -221,6 +226,54 @@ const SalaryTrends = () => {
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-12 animate-in fade-in duration-500">
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @media print {
+                    @page {
+                        margin: 0.5cm;
+                        size: landscape;
+                    }
+                    aside, header, .no-print {
+                        display: none !important;
+                    }
+                    body {
+                        background-color: white !important;
+                        font-size: 11pt !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    main {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    .max-w-6xl {
+                        max-width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    .space-y-8 {
+                        gap: 1.5rem !important;
+                    }
+                    .p-4, .p-6, .p-8, .pt-8 {
+                        padding: 1rem !important;
+                    }
+                    .h-[300px] {
+                        height: 250px !important;
+                    }
+                    .shadow-xl, .shadow-2xl {
+                        box-shadow: none !important;
+                        border: 1px solid #e5e7eb !important;
+                    }
+                    .rounded-3xl, .rounded-[2.5rem] {
+                        border-radius: 12px !important;
+                    }
+                    h1 { font-size: 20pt !important; }
+                    h3 { font-size: 14pt !important; }
+                    .text-lg { font-size: 11pt !important; }
+                    .text-2xl { font-size: 20pt !important; }
+                    p { font-size: 10pt !important; }
+                }
+            ` }} />
             {/* Page Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -230,10 +283,14 @@ const SalaryTrends = () => {
                         <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Analyze salary patterns and track earnings</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 no-print">
                     <Button onClick={fetchTrends} variant="outline" className="rounded-xl h-11 px-4 border-neutral-200 bg-white">
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
+                    </Button>
+                    <Button onClick={handlePrint} variant="outline" className="rounded-xl h-11 px-6 font-bold border-neutral-200 bg-white hover:bg-neutral-50 transition-colors">
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print View
                     </Button>
                     <Button onClick={exportReport} className="bg-black hover:bg-neutral-800 text-white rounded-xl h-11 px-6 font-bold shadow-lg shadow-black/20">
                         <Download className="h-4 w-4 mr-2" />
@@ -243,7 +300,7 @@ const SalaryTrends = () => {
             </div>
 
             {/* Filters Section */}
-            <Card className="border-none shadow-xl bg-neutral-50/50 rounded-3xl overflow-hidden">
+            <Card className="border-none shadow-xl bg-neutral-50/50 rounded-3xl overflow-hidden no-print">
                 <CardContent className="p-6 flex flex-wrap items-center gap-6">
                     <MonthPicker label="Start Month" date={startDate} setDate={setStartDate} isOpen={isStartPickerOpen} setIsOpen={setIsStartPickerOpen} />
                     <span className="self-center mt-6 text-neutral-400 font-bold">to</span>
