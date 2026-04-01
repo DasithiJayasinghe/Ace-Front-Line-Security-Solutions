@@ -213,21 +213,25 @@ const PayrollRecords = () => {
     };
 
     const handleExport = async () => {
-        const queryMonth = showAllMonths ? "ALL" : selectedMonth;
         try {
-            toast.info(`Generating bank export for ${queryMonth}...`);
-            const response = await fetch(`http://localhost:8080/api/payroll/export?month=${queryMonth}`);
+            toast.info(`Attempting to generate bank export...`);
+            const response = await fetch(`http://localhost:8080/api/payroll/export`);
 
             if (!response.ok) {
-                toast.error("Failed to generate bank export.");
+                const errorText = await response.text();
+                toast.error(errorText || "Failed to generate bank export.");
                 return;
             }
+
+            const lastMonth = new Date();
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+            const exportMonth = format(lastMonth, "yyyy-MM");
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `Bank_Export_${queryMonth}.csv`);
+            link.setAttribute('download', `Bank_Export_${exportMonth}.csv`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -300,9 +304,8 @@ const PayrollRecords = () => {
 
                 <div className="flex items-center gap-3">
                     <Button
-                        variant="outline"
                         onClick={handleExport}
-                        className="h-14 px-8 border-neutral-200 text-neutral-600 font-black uppercase tracking-widest hover:bg-neutral-50 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-neutral-100 rounded-2xl gap-3"
+                        className="h-14 px-8 bg-black text-white font-black uppercase tracking-widest hover:bg-neutral-800 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-black/10 rounded-2xl gap-3 border-none"
                     >
                         <Download className="h-5 w-5 stroke-[3px]" /> Export CSV
                     </Button>
