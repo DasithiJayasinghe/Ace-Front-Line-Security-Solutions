@@ -301,16 +301,8 @@ public class SalaryService {
                 .orElseThrow(() -> new IllegalArgumentException("Advance not found"));
         adv.setReviewedBy(accountant);
         adv.setReviewedAt(LocalDateTime.now());
-        adv.setStatus(RequestStatus.PAID);
+        adv.setStatus(RequestStatus.PROCESSING);
         advanceRequestRepository.save(adv);
-
-        Notification notification = Notification.builder()
-                .user(adv.getUser())
-                .message("Your advance request of LKR " + adv.getAmount() + " for " + adv.getForMonth() + " has been paid.")
-                .isRead(false)
-                .createdAt(LocalDateTime.now()) // Explicitly set if @PrePersist is not enough for immediate UI
-                .build();
-        notificationRepository.save(notification);
     }
 
     @Transactional
