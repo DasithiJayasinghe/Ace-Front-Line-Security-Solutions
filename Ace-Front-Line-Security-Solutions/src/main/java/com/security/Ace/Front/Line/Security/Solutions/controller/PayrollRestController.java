@@ -161,9 +161,6 @@ public class PayrollRestController {
     @GetMapping("/export")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> exportBankCSV() {
-        if (java.time.LocalDate.now().getDayOfMonth() != 10) {
-            return ResponseEntity.badRequest().body("CSV export is strictly allowed only on the 10th day of the month.".getBytes());
-        }
 
         String targetMonth = java.time.YearMonth.now().minusMonths(1).toString();
         List<Salary> salaries = salaryService.getPaidForMonth(targetMonth);
@@ -240,6 +237,11 @@ public class PayrollRestController {
     @PostMapping("/pay/{id}")
     public ResponseEntity<?> markAsPaid(@PathVariable Long id) {
         try {
+            Salary salary = salaryService.getPayrollById(id);
+            java.time.LocalDate deadline = java.time.YearMonth.parse(salary.getMonth()).plusMonths(1).atDay(8);
+            if (java.time.LocalDate.now().isAfter(deadline)) {
+                return ResponseEntity.badRequest().body("Salaries for " + salary.getMonth() + " cannot be paid after " + deadline + ".");
+            }
             salaryService.markAsPaid(id, LocalDate.now(), "Bank Transfer", "REF-" + System.currentTimeMillis(),
                     "Admin");
             return ResponseEntity.ok().build();
@@ -363,6 +365,9 @@ public class PayrollRestController {
 
     @PostMapping("/advances/pay/{id}")
     public ResponseEntity<?> markAdvanceAsPaid(@PathVariable Long id, @RequestParam Long accountantId) {
+        if (java.time.LocalDate.now().getDayOfMonth() > 23) {
+            return ResponseEntity.badRequest().body("Advances cannot be processed after the 23rd of the month.");
+        }
         try {
             User accountant = userRepository.findById(accountantId)
                     .orElseThrow(() -> new IllegalArgumentException("Accountant not found: " + accountantId));
@@ -371,6 +376,41 @@ public class PayrollRestController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @GetMapping("/advances/export")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> exportAdvancesCSV(@RequestParam String month) {
+        if ("ALL".equalsIgnoreCase(month)) {
+            return ResponseEntity.badRequest().body("Please select a specific month to export.".getBytes());
+        }
+
+        List<AdvanceRequest> advances = advanceRequestRepository.findAll().stream()
+                .filter(a -> month.equals(a.getForMonth()) && (a.getStatus() == RequestStatus.PAID || a.getStatus() == RequestStatus.PROCESSING))
+                .collect(Collectors.toList());
+
+        StringBuilder csv = new StringBuilder();
+        csv.append("Officer Name,Bank Name,Branch Name,Account Number,Advance Amount,For Month,Status\n");
+
+        for (AdvanceRequest a : advances) {
+            csv.append(String.format("\"%s\",\"%s\",\"%s\",\"%s\",%.2f,\"%s\",\"%s\"\n",
+                    a.getUser().getFullName(),
+                    a.getUser().getBankName() != null ? a.getUser().getBankName() : "N/A",
+                    a.getUser().getBankBranch() != null ? a.getUser().getBankBranch() : "N/A",
+                    a.getUser().getBankAccountNumber() != null ? a.getUser().getBankAccountNumber() : "N/A",
+                    a.getAmount(),
+                    a.getForMonth(),
+                    a.getStatus().name()));
+        }
+
+        byte[] output = csv.toString().getBytes();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", "Advances_Export_" + month + ".csv");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(output);
     }
 
     @GetMapping("/notifications/{userId}")
