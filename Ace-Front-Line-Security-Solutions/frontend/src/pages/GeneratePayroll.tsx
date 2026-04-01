@@ -36,7 +36,7 @@ import {
     ChevronLeft,
     ChevronRight
 } from "lucide-react";
-import { format, setMonth as setDateMonth, setYear, startOfMonth, endOfMonth } from "date-fns";
+import { format, setMonth as setDateMonth, setYear, startOfMonth, endOfMonth, subMonths, getDate } from "date-fns";
 import logo from "@/assets/logo.png";
 
 interface Officer {
@@ -64,13 +64,20 @@ interface Deduction {
 
 const GeneratePayroll = () => {
     const navigate = useNavigate();
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    // Before the 8th: Previous Month. From the 8th onwards: Current Month.
+    const getInitialMonth = () => {
+        const today = new Date();
+        return getDate(today) < 8 ? subMonths(today, 1) : today;
+    };
+
+    const [selectedDate, setSelectedDate] = useState<Date>(getInitialMonth());
     const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
 
     const [officers, setOfficers] = useState<Officer[]>([]);
     const [selectedOfficerId, setSelectedOfficerId] = useState("");
     const [officer, setOfficer] = useState<Officer | null>(null);
     const [totalShifts, setTotalShifts] = useState<string>("");
+    const [monthlyOvertimeHours, setMonthlyOvertimeHours] = useState<number>(0);
     const [allowances, setAllowances] = useState<Allowance[]>([]);
     const [deductions, setDeductions] = useState<Deduction[]>([]);
     const [advanceWarning, setAdvanceWarning] = useState<string | null>(null);
@@ -172,7 +179,36 @@ const GeneratePayroll = () => {
         fetchOfficerAdvances();
     }, [selectedOfficerId, monthStr, selectedDate, officers]);
 
-    const overtimeAmount = officer ? (parseInt(totalShifts) || 0) * officer.otRate : 0;
+    // Fetch total shifts and OT hours from MonthlyStatistics
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (selectedOfficerId && monthStr) {
+                const selectedOfficerDbId = officers.find(o => o.officerId === selectedOfficerId)?.id;
+                if (selectedOfficerDbId) {
+                    try {
+                        const res = await fetch(`http://localhost:8080/api/payroll/officer/stats/${selectedOfficerDbId}?month=${monthStr}`);
+                        if (res.ok) {
+                            const stats = await res.json();
+                            setTotalShifts(stats.monthlyShifts > 0 ? stats.monthlyShifts.toString() : "");
+                            setMonthlyOvertimeHours(stats.monthlyOvertimeHours || 0);
+                        } else {
+                            setTotalShifts("");
+                            setMonthlyOvertimeHours(0);
+                        }
+                    } catch (error) {
+                        console.error("Failed to fetch stats", error);
+                    }
+                }
+            } else {
+                setTotalShifts("");
+                setMonthlyOvertimeHours(0);
+            }
+        };
+
+        fetchStats();
+    }, [selectedOfficerId, monthStr, officers]);
+
+    const overtimeAmount = officer ? (officer.basicSalary / 200) * 1.5 * monthlyOvertimeHours : 0;
     const epfAmount = officer ? officer.basicSalary * 0.08 : 0;
 
     const totalAllowances = officer ? officer.basicSalary + overtimeAmount + allowances.reduce((acc, curr) => acc + curr.amount, 0) : 0;
